@@ -239,9 +239,10 @@ const getInternalOptions = <Context extends SharedContext>(
   return {
     debug: {
       boolean: true,
-      default: false,
+      default: Boolean(process.env.CI),
+      defaultDescription: "true on CI and false elsewhere",
       description:
-        "Run all tasks sequentially, switch to verbose renderer, and show the output of commands. Defaults to true on CI and false otherwise.",
+        "Run all tasks sequentially, switch to verbose renderer, and show the output of commands",
     },
     dryRun: {
       boolean: true,

@@ -1,0 +1,25 @@
+{
+  "test-command": {
+    "task": {
+      "children": [
+        {
+          "command": ["pwd"],
+          "tags": ["a"],
+          "title": "Print current directory"
+        },
+        {
+          "command": ["ls"],
+          "tags": ["b"],
+          "title": "List content of directory"
+        }
+      ],
+      "title": "Parent task"
+    },
+    "options": {
+      "flag": {
+        "boolean": true,
+        "description": "A flag option"
+      }
+    }
+  }
+}

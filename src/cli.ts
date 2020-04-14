@@ -13,12 +13,12 @@ const createCli = () =>
   createYargs(process.argv.slice(2))
     .command(
       "compile <source> <target>",
-      "Compile the command file at the given path to a single executable Node.js file, together with all its dependencies",
+      "Compile the commands at the given path to a single executable Node.js file, together with all its dependencies",
       // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
       (yargs) => {
         yargs
           .positional("source", {
-            describe: "The path resolving to the command file",
+            describe: "The path resolving to the file exporting the commands",
             normalize: true,
             type: "string",
           })
@@ -33,11 +33,11 @@ const createCli = () =>
     )
     .command(
       `${runCommand} <path>`,
-      "Run the command file at the given path, forwarding it the command line options after --",
+      "Run the commands at the given path, forwarding it the command line arguments after --",
       // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
       (yargs) => {
         yargs.positional("path", {
-          describe: "The path resolving to the command file",
+          describe: "The path resolving to the file exporting the commands",
           normalize: true,
           type: "string",
         });

@@ -1,6 +1,6 @@
 import { Options } from "execa";
 import { Command, SetOutput } from "./commands";
-import { SharedContext } from "./context";
+import { Context } from "./context";
 
 type BaseTask = Readonly<{
   title: string;
@@ -15,48 +15,43 @@ type RequirableTask = Readonly<{
   required?: true;
 }>;
 
-type SkippableTask<Context extends SharedContext> = Readonly<{
-  skip?: (context: Readonly<Context>) => boolean;
+type SkippableTask<C> = Readonly<{
+  skip?: (context: Context<Readonly<C>>) => boolean | Promise<boolean>;
 }>;
 
-type BaseLeafTask<Context extends SharedContext> = BaseTask &
-  TaggedTask &
-  SkippableTask<Context>;
+type BaseLeafTask<C> = BaseTask & TaggedTask & SkippableTask<C>;
 
-type CommandGetter<Context extends SharedContext> = (
-  context: Readonly<Context>,
-) => Command;
+type CommandGetter<C> = (
+  context: Context<Readonly<C>>,
+) => Command | Promise<Command>;
 
-type CommandTask<Context extends SharedContext> = BaseLeafTask<Context> &
+type CommandTask<C> = BaseLeafTask<C> &
   Readonly<{
-    command: Command | CommandGetter<Context>;
+    command: Command | CommandGetter<C>;
     options?: Options;
   }>;
 
-type RegularTask<Context extends SharedContext> = BaseLeafTask<Context> &
+type RegularTask<C> = BaseLeafTask<C> &
   RequirableTask &
   Readonly<{
-    // Context is not readonly here because regular tasks have the right to modify it.
-    run(context: Context, setOutput: SetOutput): void | Promise<unknown>;
+    run(
+      // C is not readonly here because regular tasks have the right to modify it.
+      context: Context<C>,
+      setOutput: SetOutput,
+    ): unknown | Promise<unknown>;
   }>;
 
-type LeafTask<Context extends SharedContext> =
-  | CommandTask<Context>
-  | RegularTask<Context>;
+type LeafTask<C> = CommandTask<C> | RegularTask<C>;
 
-type ChildTask<Context extends SharedContext> =
-  | LeafTask<Context>
-  | ParentTask<Context>;
+type ChildTask<C> = LeafTask<C> | ParentTask<C>;
 
-type ParentTask<Context extends SharedContext> = BaseTask &
-  SkippableTask<Context> &
+type ParentTask<C> = BaseTask &
+  SkippableTask<C> &
   Readonly<{
-    children: ReadonlyArray<ChildTask<Context>>;
+    children: ReadonlyArray<ChildTask<C>>;
     concurrent?: true;
   }>;
 
-type Task<Context extends SharedContext> =
-  | LeafTask<Context>
-  | ParentTask<Context>;
+type Task<C> = LeafTask<C> | ParentTask<C>;
 
 export { CommandTask, ParentTask, RegularTask, SetOutput, Task };

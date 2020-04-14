@@ -9,14 +9,21 @@ import {
   processCommandError,
   SetOutput,
 } from "./commands";
-import { SharedContext, InternalContext } from "./context";
+import { InternalContext } from "./context";
 import { CommandTask, ParentTask, RegularTask, Task } from "./tasks";
+
+type Command<C> = Readonly<{
+  options?: Readonly<{ [Tkey in keyof Partial<C>]: Options }>;
+  task: Task<C>;
+}>;
+
+type Commands = Readonly<{ [TKey: string]: Command<any> }>;
 
 const shouldSkipByOnlyOrTagOption = (
   ancestorWhitelisted: boolean,
   context: InternalContext,
   tags: readonly string[] | undefined,
-  title: Task<InternalContext>["title"],
+  title: string,
 ): boolean =>
   (!ancestorWhitelisted &&
     context.only.length > 0 &&
@@ -32,31 +39,49 @@ const createSetOutput = (taskWrapper: ListrTaskWrapper): SetOutput => (
   taskWrapper.output = output;
 };
 
-const addDetailsToTaskTitle = (
-  title: Task<InternalContext>["title"],
-  details: string,
-) => `${title} (${details})`;
+const addDetailsToTaskTitle = (title: string, details: string) =>
+  `${title} (${details})`;
 
-const createSkippableTask = <Context extends InternalContext>(
-  task: Readonly<ListrTask<Context>>,
-): ListrTask<Context> => ({
+const createSkippableTask = <C extends InternalContext>(
+  task: Readonly<ListrTask<C>>,
+): ListrTask<C> => ({
   ...task,
-  skip: (context) =>
-    (task.skip && task.skip(context)) || context.skip.includes(task.title),
+  async skip(context) {
+    if (task.skip) {
+      const skip = await task.skip(context);
+      if (skip) {
+        return true;
+      }
+    }
+
+    return context.skip.includes(task.title);
+  },
 });
 
-const createCommandTask = <Context extends InternalContext>(
+const createCommandTask = <C extends InternalContext>(
   ancestorWhitelisted: boolean,
-  { command, options, skip, tags, title }: CommandTask<Context>,
-): ListrTask<Context> =>
+  { command, options, skip: skipTask, tags, title }: CommandTask<C>,
+): ListrTask<C> =>
   createSkippableTask({
-    skip: (context) =>
-      skip?.(context) ??
-      shouldSkipByOnlyOrTagOption(ancestorWhitelisted, context, tags, title),
+    async skip(context) {
+      if (skipTask) {
+        const skip = await skipTask(context);
+        if (skip) {
+          return true;
+        }
+      }
+
+      return shouldSkipByOnlyOrTagOption(
+        ancestorWhitelisted,
+        context,
+        tags,
+        title,
+      );
+    },
     // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
     async task(context, taskWrapper) {
       const actualCommand =
-        typeof command === "function" ? command(context) : command;
+        typeof command === "function" ? await command(context) : command;
 
       if (context.dryRun) {
         taskWrapper.title = addDetailsToTaskTitle(
@@ -76,21 +101,30 @@ const createCommandTask = <Context extends InternalContext>(
     title,
   });
 
-const createRegularTask = <Context extends InternalContext>(
+const createRegularTask = <C extends InternalContext>(
   ancestorWhitelisted: boolean,
-  { required, run, skip, tags, title }: RegularTask<Context>,
-): ListrTask<Context> =>
+  { required, run, skip: taskSkip, tags, title }: RegularTask<C>,
+): ListrTask<C> =>
   createSkippableTask({
-    skip: (context) =>
-      skip?.(context) ||
-      (!required &&
+    async skip(context) {
+      if (taskSkip) {
+        const skip = await taskSkip(context);
+        if (skip) {
+          return true;
+        }
+      }
+
+      return (
+        !required &&
         (context.dryRun ||
           shouldSkipByOnlyOrTagOption(
             ancestorWhitelisted,
             context,
             tags,
             title,
-          ))),
+          ))
+      );
+    },
     // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
     async task(context, taskWrapper) {
       await run(context, createSetOutput(taskWrapper));
@@ -98,10 +132,10 @@ const createRegularTask = <Context extends InternalContext>(
     title,
   });
 
-const createParentTask = <Context extends InternalContext>(
+const createParentTask = <C extends InternalContext>(
   ancestorWhitelisted: boolean,
-  { children, concurrent, skip, title }: ParentTask<Context>,
-): ListrTask<Context> =>
+  { children, concurrent, skip, title }: ParentTask<C>,
+): ListrTask<C> =>
   createSkippableTask({
     skip,
     task(context) {
@@ -119,28 +153,22 @@ const createParentTask = <Context extends InternalContext>(
     title,
   });
 
-const isCommandTask = <Context extends SharedContext>(
-  task: Task<Context>,
-): task is CommandTask<Context> =>
+const isCommandTask = <C>(task: Task<C>): task is CommandTask<C> =>
   Object.prototype.hasOwnProperty.call(task, "command");
 
-const isParentTask = <Context extends SharedContext>(
-  task: Task<Context>,
-): task is ParentTask<Context> =>
+const isParentTask = <C>(task: Task<C>): task is ParentTask<C> =>
   Object.prototype.hasOwnProperty.call(task, "children");
 
-const isRegularTask = <Context extends SharedContext>(
-  task: Task<Context>,
-): task is RegularTask<Context> =>
+const isRegularTask = <C>(task: Task<C>): task is RegularTask<C> =>
   Object.prototype.hasOwnProperty.call(task, "run");
 
 // This function is called recursively in functions declared above
 // so it has to be hoisted and declared with the "function" keyword.
 // eslint-disable-next-line func-style
-function createListrTask<Context extends InternalContext>(
-  task: Task<Context>,
+function createListrTask<C extends InternalContext>(
+  task: Task<C>,
   ancestorWhitelisted = false,
-): ListrTask<Context> {
+): ListrTask<C> {
   if (isCommandTask(task)) {
     return createCommandTask(ancestorWhitelisted, task);
   }
@@ -152,9 +180,9 @@ function createListrTask<Context extends InternalContext>(
   return createParentTask(ancestorWhitelisted, task);
 }
 
-const runTask = async <Context extends InternalContext>(
-  task: Task<Context>,
-  context: Context,
+const runTask = async <C extends InternalContext>(
+  task: Task<C>,
+  context: C,
 ): Promise<void> => {
   try {
     await new Listr(
@@ -175,10 +203,10 @@ const runTask = async <Context extends InternalContext>(
   }
 };
 
-const createYargsCommand = <Context extends InternalContext>(
+const createYargsCommand = <C extends InternalContext>(
   name: string,
-  task: Task<Context>,
-  options: Readonly<{ [Tkey in keyof Partial<Context>]: Options }>,
+  task: Task<C>,
+  options: Readonly<{ [Tkey in keyof Partial<C>]: Options }>,
 ): CommandModule => ({
   builder: options,
   command: name,
@@ -188,15 +216,8 @@ const createYargsCommand = <Context extends InternalContext>(
   },
 });
 
-type Command<Context> = Readonly<{
-  options?: Readonly<{ [Tkey in keyof Partial<Context>]: Options }>;
-  task: Task<Context & SharedContext>;
-}>;
-
-type Commands = Readonly<{ [TKey: string]: Command<any> }>;
-
-const addAllTitleSlugsAndTags = <Context extends SharedContext>(
-  task: Task<Context>,
+const addAllTitleSlugsAndTags = <C>(
+  task: Task<C>,
   // This function is called recursively to fill these arguments.
   /* eslint-disable @typescript-eslint/prefer-readonly-parameter-types */
   slugToTitle: { [TKey: string]: string },
@@ -226,8 +247,8 @@ const addAllTitleSlugsAndTags = <Context extends SharedContext>(
   }
 };
 
-const getInternalOptions = <Context extends SharedContext>(
-  task: Task<Context>,
+const getInternalOptions = <C>(
+  task: Task<C>,
 ): { [TKey in keyof InternalContext]: Options } => {
   const slugToTitle: { [TKey: string]: string } = {};
   const tags: string[] = [];
@@ -242,7 +263,7 @@ const getInternalOptions = <Context extends SharedContext>(
       default: Boolean(process.env.CI),
       defaultDescription: "true on CI and false elsewhere",
       description:
-        "Run all tasks sequentially, switch to verbose renderer, and show the output of commands",
+        "Run all tasks sequentially, switch to verbose renderer, and show the output of shell commands",
     },
     dryRun: {
       boolean: true,

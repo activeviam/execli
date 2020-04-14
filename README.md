@@ -69,8 +69,8 @@ Options:
   --customFlag  A custom option                                                                                                                                                                                 [boolean]
   --debug       Run all tasks sequentially, switch to verbose renderer, and show the output of commands                                                               [boolean] [default: true on CI and false elsewhere]
   --dryRun      Don't run tasks but display the shell commands that would have been run                                                                                                        [boolean] [default: false]
-  --only        Only run the CLI task with this title (or title slug)   [array] [choices: "Parent task", "Command task", "Regular task", "Nested task", "Another command task", "Yet another command task"] [default: []]
-  --skip        Skip the CLI task with this title (or title slug)       [array] [choices: "Parent task", "Command task", "Regular task", "Nested task", "Another command task", "Yet another command task"] [default: []]
+  --only        Only run the CLI task with this title (or title slug)   [array] [choices: "Another command task", "Command task", "Nested task", "Parent task", "Regular task", "Yet another command task"] [default: []]
+  --skip        Skip the CLI task with this title (or title slug)       [array] [choices: "Another command task", "Command task", "Nested task", "Parent task", "Regular task", "Yet another command task"] [default: []]
   --tag         Only run the CLI task with this tag                                                                                                   [array] [choices: "filesystem", "network", "regular"] [default: []]
 ```
 

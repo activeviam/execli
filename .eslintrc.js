@@ -26,6 +26,7 @@ module.exports = {
     "@typescript-eslint/explicit-function-return-type": "off",
     // We use sort-keys instead.
     "@typescript-eslint/member-ordering": "off",
+    "@typescript-eslint/require-array-sort-compare": "off",
     // It's useful to use template string to cast expressions to strings.
     "@typescript-eslint/restrict-template-expressions": "off",
     "arrow-body-style": "error",

@@ -19,7 +19,7 @@ test("compile", async () => {
   ]);
   expect(stdout).toContain("Print current directory");
   expect(stdout).toContain(process.cwd());
-});
+}, 10000);
 
 describe("run", () => {
   const runArguments = [binPath, "run", commandFilePath];

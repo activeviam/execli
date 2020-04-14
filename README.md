@@ -91,7 +91,7 @@ Options:
 ```
 
 ```
-$ execli run example.js -- demo --dryRun
+$ execli run commands.js -- demo --dryRun
 ✔ Parent task
 ↓ Command task ($ pwd) [skipped]
 ↓ Regular task [skipped]
@@ -119,7 +119,7 @@ Not enough non-option arguments: got 0, need at least 2
 ```
 
 ```
-$ execli compile example.js cli.js
+$ execli compile commands.js cli.js
 $ ./cli.js demo --debug  --dryRun
 [13:37:42] Parent task [started]
 [13:37:42] Command task [started]

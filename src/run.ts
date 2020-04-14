@@ -232,7 +232,7 @@ const getInternalOptions = <Context extends SharedContext>(
   const slugToTitle: { [TKey: string]: string } = {};
   const tags: string[] = [];
   addAllTitleSlugsAndTags(task, slugToTitle, tags);
-  const allTaskTitles = Object.values(slugToTitle);
+  const allTaskTitles = Object.values(slugToTitle).sort();
   const coerceSlugToTitle = (elements: readonly string[]): string[] =>
     elements.map((element) => slugToTitle[element] || element);
 
@@ -266,7 +266,6 @@ const getInternalOptions = <Context extends SharedContext>(
     },
     tag: {
       array: true,
-      // eslint-disable-next-line @typescript-eslint/require-array-sort-compare
       choices: tags.sort(),
       default: [],
       description: "Only run the CLI task with this tag",

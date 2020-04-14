@@ -11,6 +11,7 @@ test("compile", async () => {
   // Use a temporary file path outside the package to make sure all the dependencies
   // are correctly bundled and are not required through the package's node_modules.
   const targetPath = tempy.file({ extension: "js" });
+  console.log({ targetPath });
   await execa("node", [binPath, "compile", commandFilePath, targetPath]);
   const { stdout } = await execa("node", [
     targetPath,

@@ -8,9 +8,15 @@ Powered by [listr](https://www.npmjs.com/package/listr) and [yargs](https://www.
 
 ### Example file
 
-```javascript
-// commands.js
-module.exports = {
+```typescript
+// commands.ts
+import { Command } from "execli";
+
+type DemoContext = {
+  customFlag: boolean;
+};
+
+const demo: Command<DemoContext> = {
   options: {
     customFlag: {
       boolean: true,
@@ -51,12 +57,17 @@ module.exports = {
     title: "Parent task",
   },
 };
+
+export { demo };
 ```
+
+This file is written in TypeScript to showcase the built-in types.
+Compile it down to JavaScript to use it with the following commands.
 
 ### Running the CLI
 
 ```
-$ execli run commands.js
+$ execli run --help
 execli run <path>
 
 Run the commands at the given path, forwarding it the command line arguments after --
@@ -66,8 +77,6 @@ Positionals:
 
 Options:
   --help  Show help                                                         [boolean]
-
-Not enough non-option arguments: got 0, need at least 1
 ```
 
 ```
@@ -103,7 +112,7 @@ $ execli run commands.js -- demo --dryRun
 ### Compiling the CLI
 
 ```
-$ execli compile
+$ execli compile --help
 execli compile <source> <target>
 
 Compile the commands at the given path to a single executable Node.js file, together with all its dependencies
@@ -114,8 +123,6 @@ Positionals:
 
 Options:
   --help  Show help                                                              [boolean]
-
-Not enough non-option arguments: got 0, need at least 2
 ```
 
 ```

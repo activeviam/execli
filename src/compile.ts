@@ -1,7 +1,7 @@
-import fs from "fs-extra";
 import path from "path";
 // @ts-ignore
 import ncc from "@zeit/ncc";
+import fs from "fs-extra";
 
 const getSource = (filePath: string) => `#!/usr/bin/env node
 

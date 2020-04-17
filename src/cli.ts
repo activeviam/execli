@@ -1,9 +1,7 @@
 #!/usr/bin/env node
 
 import { resolve } from "path";
-
 import createYargs from "yargs/yargs";
-
 import { compile } from "./compile";
 import { runCli } from "./run";
 

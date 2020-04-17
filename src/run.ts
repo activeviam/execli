@@ -1,16 +1,24 @@
 import "any-observable/register/zen";
+import isInteractive from "is-interactive";
 import Listr, { ListrTask, ListrTaskWrapper } from "listr";
 import slugify from "slugify";
-import type { CommandModule, Options } from "yargs";
+import { CommandModule, Options } from "yargs";
 import createYargs from "yargs/yargs";
 import {
-  exec,
+  createExec,
   getCommandString,
+  OutputLine,
   processCommandError,
-  SetOutput,
+  withBackgroundCommand,
 } from "./commands";
 import { InternalContext } from "./context";
-import { CommandTask, ParentTask, RegularTask, Task } from "./tasks";
+import {
+  BackgroundCommandTask,
+  CommandTask,
+  ParentTask,
+  RegularTask,
+  Task,
+} from "./tasks";
 
 type Command<C> = Readonly<{
   options?: Readonly<{ [Tkey in keyof Partial<C>]: Options }>;
@@ -33,10 +41,14 @@ const shouldSkipByOnlyOrTagOption = (
     !context.tag.some((givenTag) => tags.includes(givenTag)));
 
 // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
-const createSetOutput = (taskWrapper: ListrTaskWrapper): SetOutput => (
-  output,
+const createOutputLine = (taskWrapper: ListrTaskWrapper): OutputLine => (
+  line,
 ) => {
-  taskWrapper.output = output;
+  if (/\r?\n/.test(line)) {
+    throw new Error(`Output line cannot contain line break:\n\n: ${line}`);
+  }
+
+  taskWrapper.output = line;
 };
 
 const addDetailsToTaskTitle = (title: string, details: string) =>
@@ -58,47 +70,110 @@ const createSkippableTask = <C extends InternalContext>(
   },
 });
 
-const createCommandTask = <C extends InternalContext>(
+const skipCommandTask = async <C extends InternalContext>(
   ancestorWhitelisted: boolean,
-  { command, options, skip: skipTask, tags, title }: CommandTask<C>,
+  context: C,
+  { required, skip: skipTask, tags, title }: CommandTask<C>,
+) => {
+  if (skipTask) {
+    const skip = await skipTask(context);
+    if (skip) {
+      return true;
+    }
+  }
+
+  if (required) {
+    return false;
+  }
+
+  return shouldSkipByOnlyOrTagOption(ancestorWhitelisted, context, tags, title);
+};
+
+const getCommand = <C extends InternalContext>(
+  context: C,
+  { command }: CommandTask<C>,
+) => (typeof command === "function" ? command(context) : command);
+
+const dryRunCommandTask = <C extends InternalContext>(
+  commandString: string,
+  title: string,
+  // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
+  taskWrapper: ListrTaskWrapper<C>,
+) => {
+  taskWrapper.title = addDetailsToTaskTitle(title, `$ ${commandString}`);
+  taskWrapper.skip("");
+};
+
+const createBackgroundCommandTask = <C extends InternalContext>(
+  ancestorWhitelisted: boolean,
+  task: BackgroundCommandTask<C>,
 ): ListrTask<C> =>
   createSkippableTask({
-    async skip(context) {
-      if (skipTask) {
-        const skip = await skipTask(context);
-        if (skip) {
-          return true;
-        }
-      }
-
-      return shouldSkipByOnlyOrTagOption(
-        ancestorWhitelisted,
-        context,
-        tags,
-        title,
-      );
-    },
+    skip: async (context) =>
+      skipCommandTask(ancestorWhitelisted, context, task),
     // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
     async task(context, taskWrapper) {
-      const actualCommand =
-        typeof command === "function" ? await command(context) : command;
+      const command = getCommand(context, task);
 
       if (context.dryRun) {
-        taskWrapper.title = addDetailsToTaskTitle(
-          title,
-          `$ ${getCommandString(actualCommand, options)}`,
+        dryRunCommandTask(
+          getCommandString(command, task.options, true),
+          task.title,
+          taskWrapper,
         );
-        taskWrapper.skip("");
       } else {
-        await exec(
-          actualCommand,
+        const outputLine = createOutputLine(taskWrapper);
+        return withBackgroundCommand({
+          command,
           context,
-          createSetOutput(taskWrapper),
-          options,
+          kill: task.kill,
+          match: task.match,
+          options: task.options,
+          outputLine,
+          // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
+          async runOnMatch(matches) {
+            const exec = createExec(context, outputLine);
+            const result = await task.runOnMatch({
+              context,
+              exec,
+              matches,
+              outputLine,
+            });
+            if (result) {
+              outputLine(result);
+            }
+          },
+        });
+      }
+    },
+    title: task.title,
+  });
+
+const createCommandTask = <C extends InternalContext>(
+  ancestorWhitelisted: boolean,
+  task: CommandTask<C>,
+): ListrTask<C> =>
+  createSkippableTask({
+    skip: async (context) =>
+      skipCommandTask(ancestorWhitelisted, context, task),
+    // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
+    async task(context, taskWrapper) {
+      const command = getCommand(context, task);
+
+      if (context.dryRun) {
+        dryRunCommandTask(
+          getCommandString(command, task.options),
+          task.title,
+          taskWrapper,
+        );
+      } else {
+        await createExec(context, createOutputLine(taskWrapper))(
+          command,
+          task.options,
         );
       }
     },
-    title,
+    title: task.title,
   });
 
 const createRegularTask = <C extends InternalContext>(
@@ -127,7 +202,12 @@ const createRegularTask = <C extends InternalContext>(
     },
     // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
     async task(context, taskWrapper) {
-      await run(context, createSetOutput(taskWrapper));
+      const outputLine = createOutputLine(taskWrapper);
+      const exec = createExec(context, outputLine);
+      const result = await run({ context, exec, outputLine });
+      if (result) {
+        outputLine(result);
+      }
     },
     title,
   });
@@ -153,6 +233,13 @@ const createParentTask = <C extends InternalContext>(
     title,
   });
 
+const isBackgroundCommandTask = <C>(
+  task: Task<C>,
+): task is BackgroundCommandTask<C> =>
+  ["match", "runOnMatch"].every((property) =>
+    Object.prototype.hasOwnProperty.call(task, property),
+  );
+
 const isCommandTask = <C>(task: Task<C>): task is CommandTask<C> =>
   Object.prototype.hasOwnProperty.call(task, "command");
 
@@ -169,6 +256,10 @@ function createListrTask<C extends InternalContext>(
   task: Task<C>,
   ancestorWhitelisted = false,
 ): ListrTask<C> {
+  if (isBackgroundCommandTask(task)) {
+    return createBackgroundCommandTask(ancestorWhitelisted, task);
+  }
+
   if (isCommandTask(task)) {
     return createCommandTask(ancestorWhitelisted, task);
   }
@@ -260,8 +351,8 @@ const getInternalOptions = <C>(
   return {
     debug: {
       boolean: true,
-      default: Boolean(process.env.CI),
-      defaultDescription: "true on CI and false elsewhere",
+      default: !isInteractive(),
+      defaultDescription: "false if terminal is interactive, true otherwise",
       description:
         "Run all tasks sequentially, switch to verbose renderer, and show the output of shell commands",
     },

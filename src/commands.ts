@@ -1,38 +1,31 @@
 import path from "path";
 import chalk from "chalk";
-import execa from "execa";
+import execa, { ExecaChildProcess, Options, ExecaReturnValue } from "execa";
 import { SharedContext } from "./context";
-
-const cwd = process.cwd();
 
 type Command = readonly string[];
 
-type SetOutput = (output: string) => void;
+type Line = string;
 
-type BackgroundProcess<T> = Readonly<{
-  // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
-  callback: (matches: RegExpExecArray) => Promise<T>;
-  command: Command;
-  context: SharedContext;
-  // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
-  kill?: (process: execa.ExecaChildProcess) => void;
-  options?: Readonly<execa.Options>;
-  regexp: Readonly<RegExp>;
-  setOutput: SetOutput;
-  stream: "stderr" | "stdout";
-}>;
+type OutputLine = (line: Line) => void;
+
+type SyncRunResult = Line | void;
+type AsyncRunResult = Promise<SyncRunResult>;
+type RunResult = SyncRunResult | AsyncRunResult;
+
+type SubprocessOptions = Options &
+  Readonly<{
+    silent?: true;
+  }>;
 
 const createSubprocess = (
   command: Command,
   context: SharedContext,
-  options: execa.Options = {},
-): execa.ExecaChildProcess => {
+  options: SubprocessOptions = {},
+): ExecaChildProcess => {
   const [file, ...arguments_] = command;
-  const subprocess = execa(file, arguments_, {
-    ...options,
-    cwd: options.cwd ?? cwd,
-  });
-  if (context.debug) {
+  const subprocess = execa(file, arguments_, options);
+  if (context.debug && !options.silent) {
     if (subprocess.stdout) {
       subprocess.stdout.pipe(process.stdout);
     }
@@ -45,7 +38,7 @@ const createSubprocess = (
   return subprocess;
 };
 
-const getEnvironmentString = ({ env }: execa.Options) => {
+const getEnvironmentString = ({ env }: Options) => {
   if (env === undefined || Object.keys(env).length === 0) {
     return "";
   }
@@ -71,23 +64,33 @@ const getEnvironmentString = ({ env }: execa.Options) => {
     : bashEnvironmentString;
 };
 
-const getCommandString = (command: Command, options: execa.Options = {}) =>
+const getCommandString = (
+  command: Command,
+  options: Options = {},
+  background = false,
+) =>
   `${
-    options.cwd ? `cd ${path.relative(cwd, options.cwd)} && ` : ""
+    options.cwd ? `cd ${path.relative(process.cwd(), options.cwd)} && ` : ""
   }${getEnvironmentString(options)}${command
     .map((part) => (part.includes(" ") ? `"${part}"` : part))
-    .join(" ")}`;
+    .join(" ")}${background ? " &" : ""}`;
 
-const exec = async (
+type Exec = (
   command: Command,
+  options?: SubprocessOptions,
+) => Promise<ExecaReturnValue>;
+
+const createExec = (
   context: SharedContext,
-  setOutput: SetOutput,
-  options: execa.Options = {},
-) => {
-  setOutput(getCommandString(command, options));
+  outputLine: OutputLine,
+): Exec => async (command, options = {}) => {
+  if (!options.silent) {
+    outputLine(getCommandString(command, options));
+  }
+
   const subprocess = createSubprocess(command, context, options);
-  const { stdout } = await subprocess;
-  return stdout;
+  const result = await subprocess;
+  return result;
 };
 
 const processCommandError = (context: SharedContext, error: any) => {
@@ -118,41 +121,58 @@ const processCommandError = (context: SharedContext, error: any) => {
   /* eslint-enable @typescript-eslint/no-unsafe-member-access */
 };
 
-const withBackgroundProcess = async <T>({
-  callback,
+const withBackgroundCommand = async ({
   command,
   context,
   // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
   kill = (process) => {
     process.kill("SIGTERM", { forceKillAfterTimeout: 30000 });
   },
+  match,
   options,
-  regexp,
-  setOutput,
-  stream,
-}: BackgroundProcess<T>): Promise<T> => {
-  const commandString = getCommandString(command, options);
-  setOutput(commandString);
+  outputLine,
+  runOnMatch,
+}: Readonly<{
+  command: Command;
+  context: SharedContext;
+  // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
+  kill?: (process: ExecaChildProcess) => void;
+  match: Readonly<RegExp>;
+  options?: Readonly<Options>;
+  outputLine: OutputLine;
+  // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
+  runOnMatch: (matches: RegExpExecArray) => RunResult;
+}>): Promise<string | void> => {
+  const commandString = getCommandString(command, options, true);
+  outputLine(commandString);
   const process = createSubprocess(command, context, options);
-  const outputStream = process[stream];
-  if (!outputStream) {
-    throw new Error(`Missing stream ${stream} on process.`);
-  }
 
-  const chunks: Buffer[] = [];
+  const stderrChunks: Buffer[] = [];
+  const stdoutChunks: Buffer[] = [];
+
   const matches = await Promise.race([
     new Promise<RegExpExecArray>((resolve) => {
-      // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
-      const listener = (chunk: Buffer) => {
-        chunks.push(chunk);
-        const localMatches = regexp.exec(String(chunk));
-        if (localMatches) {
-          outputStream.removeListener("data", listener);
-          resolve(localMatches);
-        }
-      };
+      [
+        { chunks: stderrChunks, stream: process.stderr },
+        { chunks: stdoutChunks, stream: process.stdout },
+      ].forEach(
+        // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
+        ({ chunks, stream }) => {
+          if (stream !== null) {
+            // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
+            const listener = (chunk: Buffer) => {
+              chunks.push(chunk);
+              const localMatches = match.exec(String(chunk));
+              if (localMatches) {
+                stream.removeListener("data", listener);
+                resolve(localMatches);
+              }
+            };
 
-      outputStream.addListener("data", listener);
+            stream.addListener("data", listener);
+          }
+        },
+      );
     }),
     process,
   ]);
@@ -163,12 +183,13 @@ const withBackgroundProcess = async <T>({
     ) as any;
     /* eslint-disable @typescript-eslint/no-unsafe-member-access */
     error.command = commandString;
-    error[stream] = String(Buffer.concat(chunks));
+    error.stderr = String(Buffer.concat(stderrChunks));
+    error.stdout = String(Buffer.concat(stdoutChunks));
     /* eslint-enable @typescript-eslint/no-unsafe-member-access */
     throw error;
   }
 
-  const result = await callback(matches);
+  const result = await runOnMatch(matches);
   try {
     kill(process);
     await process;
@@ -181,9 +202,12 @@ const withBackgroundProcess = async <T>({
 
 export {
   Command,
-  exec,
+  Exec,
+  createExec,
   getCommandString,
+  Line,
   processCommandError,
-  SetOutput,
-  withBackgroundProcess,
+  OutputLine,
+  RunResult,
+  withBackgroundCommand,
 };

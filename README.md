@@ -30,8 +30,8 @@ const demo: Command<DemoContext> = {
         title: "Command task",
       },
       {
-        run(context) {
-          if (context.debug && context.customFlag) {
+        run({ context: { customFlag, debug } }) {
+          if (debug && customFlag) {
             console.log("flag given");
           }
         },
@@ -89,7 +89,7 @@ Options:
   --help        Show help                                                                                                                       [boolean]
   --customFlag  A custom option                                                                                                                 [boolean]
   --debug       Run all tasks sequentially, switch to verbose renderer, and show the output of shell commands
-                                                                                                      [boolean] [default: true on CI and false elsewhere]
+                                                                                    [boolean] [default: false if terminal is interactive, true otherwise]
   --dryRun      Don't run tasks but display the shell commands that would have been run                                        [boolean] [default: false]
   --only        Only run the CLI task with this title (or title slug)
         [array] [choices: "Another command task", "Command task", "Nested task", "Parent task", "Regular task", "Yet another command task"] [default: []]

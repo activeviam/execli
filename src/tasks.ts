@@ -1,13 +1,9 @@
-import { Options } from "execa";
-import { Command, SetOutput } from "./commands";
+import { ExecaChildProcess, Options } from "execa";
+import { Command, Exec, Line, OutputLine, RunResult } from "./commands";
 import { Context } from "./context";
 
 type BaseTask = Readonly<{
-  title: string;
-}>;
-
-type TaggedTask = Readonly<{
-  tags?: readonly string[];
+  title: Line;
 }>;
 
 type RequirableTask = Readonly<{
@@ -19,11 +15,16 @@ type SkippableTask<C> = Readonly<{
   skip?: (context: Context<Readonly<C>>) => boolean | Promise<boolean>;
 }>;
 
-type BaseLeafTask<C> = BaseTask & TaggedTask & SkippableTask<C>;
+type TaggedTask = Readonly<{
+  tags?: readonly Line[];
+}>;
 
-type CommandGetter<C> = (
-  context: Context<Readonly<C>>,
-) => Command | Promise<Command>;
+type BaseLeafTask<C> = BaseTask &
+  RequirableTask &
+  SkippableTask<C> &
+  TaggedTask;
+
+type CommandGetter<C> = (context: Context<Readonly<C>>) => Command;
 
 type CommandTask<C> = BaseLeafTask<C> &
   Readonly<{
@@ -31,17 +32,32 @@ type CommandTask<C> = BaseLeafTask<C> &
     options?: Options;
   }>;
 
+type RegularPayload<C> = Readonly<{
+  context: Context<C>;
+  exec: Exec;
+  outputLine: OutputLine;
+}>;
+
 type RegularTask<C> = BaseLeafTask<C> &
-  RequirableTask &
   Readonly<{
-    run(
-      // C is not readonly here because regular tasks have the right to modify it.
-      context: Context<C>,
-      setOutput: SetOutput,
-    ): unknown | Promise<unknown>;
+    run(payload: RegularPayload<C>): RunResult;
   }>;
 
-type LeafTask<C> = CommandTask<C> | RegularTask<C>;
+type BackgroundCommandPayload<C> = RegularPayload<C> &
+  Readonly<{
+    matches: RegExpExecArray;
+  }>;
+
+type BackgroundCommandTask<C> = CommandTask<C> &
+  Readonly<{
+    // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
+    kill?: (process: ExecaChildProcess) => unknown;
+    match: Readonly<RegExp>;
+    // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
+    runOnMatch(payload: BackgroundCommandPayload<C>): RunResult;
+  }>;
+
+type LeafTask<C> = BackgroundCommandTask<C> | CommandTask<C> | RegularTask<C>;
 
 type ChildTask<C> = LeafTask<C> | ParentTask<C>;
 
@@ -54,4 +70,4 @@ type ParentTask<C> = BaseTask &
 
 type Task<C> = LeafTask<C> | ParentTask<C>;
 
-export { CommandTask, ParentTask, RegularTask, SetOutput, Task };
+export { BackgroundCommandTask, CommandTask, ParentTask, RegularTask, Task };

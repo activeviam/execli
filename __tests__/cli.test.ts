@@ -1,8 +1,8 @@
 import path from "path";
 import execa from "execa";
+import pkgDir from "pkg-dir";
 import tempy from "tempy";
 import { bin } from "../package.json";
-import pkgDir from "pkg-dir";
 
 const binPath = path.join(pkgDir.sync() as string, bin);
 const commandFilePath = path.join(__dirname, "command.json");

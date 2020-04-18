@@ -18,6 +18,8 @@ const compile = async ({
   target: string;
 }>) => {
   const sourcePath = path.resolve(source);
+  // Check that the source can be resolved.
+  require.resolve(sourcePath);
   // The temporary directory needs to be inside the package for imports to resolve correctly.
   const temporaryDirectory = await fs.mkdtemp(
     path.join(__dirname, "compiling-"),

@@ -5,13 +5,11 @@ import createYargs from "yargs/yargs";
 import { compile } from "./compile";
 import { runCli } from "./run";
 
-const runCommand = "run";
-
 const createCli = () =>
   createYargs(process.argv.slice(2))
     .command(
       "compile <source> <target>",
-      "Compile the commands at the given path to a single executable Node.js file, together with all its dependencies",
+      "Compile the commands at the given path to a single executable Node.js file, together with all the dependencies",
       // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
       (yargs) => {
         yargs
@@ -30,8 +28,8 @@ const createCli = () =>
       compile,
     )
     .command(
-      `${runCommand} <path>`,
-      "Run the commands at the given path, forwarding it the command line arguments after --",
+      "run <path>",
+      "Run the commands at the given path, forwarding the command line arguments after --",
       // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
       (yargs) => {
         yargs.positional("path", {

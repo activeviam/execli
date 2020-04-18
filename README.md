@@ -70,13 +70,13 @@ Compile it down to JavaScript to use it with the following commands.
 $ execli run --help
 execli run <path>
 
-Run the commands at the given path, forwarding it the command line arguments after --
+Run the commands at the given path, forwarding the command line arguments after --
 
 Positionals:
-  path  The path resolving to the file exporting the commands     [string] [required]
+  path  The path resolving to the file exporting the commands  [string] [required]
 
 Options:
-  --help  Show help                                                         [boolean]
+  --help  Show help                                                      [boolean]
 ```
 
 ```
@@ -88,9 +88,9 @@ Parent task
 Options:
   --help        Show help                                                                                                                       [boolean]
   --customFlag  A custom option                                                                                                                 [boolean]
-  --debug       Run all tasks sequentially, switch to verbose renderer, and show the output of shell commands
+  --debug       Run all tasks sequentially, switch to verbose renderer, and stream the output of shell commands
                                                                                     [boolean] [default: false if terminal is interactive, true otherwise]
-  --dryRun      Don't run tasks but display the shell commands that would have been run                                        [boolean] [default: false]
+  --dryRun      Don't run tasks but show the shell commands that would have been run                                           [boolean] [default: false]
   --only        Only run the CLI task with this title (or title slug)
         [array] [choices: "Another command task", "Command task", "Nested task", "Parent task", "Regular task", "Yet another command task"] [default: []]
   --skip        Skip the CLI task with this title (or title slug)
@@ -102,11 +102,15 @@ Options:
 ```
 $ execli run commands.js -- demo --dryRun
 ✔ Parent task
-↓ Command task ($ pwd) [skipped]
-↓ Regular task [skipped]
-✔ Nested task
+  ↓ Command task ($ pwd) [skipped]
+    → Skipped by --dryRun option
+  ↓ Regular task [skipped]
+    → Skipped by --dryRun option
+  ✔ Nested task
     ↓ Another command task ($ curl https://example.com) [skipped]
+      → Skipped by --dryRun option
     ↓ Yet another command task ($ touch file.txt) [skipped]
+      → Skipped by --dryRun option
 ```
 
 ### Compiling the CLI
@@ -115,7 +119,7 @@ $ execli run commands.js -- demo --dryRun
 $ execli compile --help
 execli compile <source> <target>
 
-Compile the commands at the given path to a single executable Node.js file, together with all its dependencies
+Compile the commands at the given path to a single executable Node.js file, together with all the dependencies
 
 Positionals:
   source  The path resolving to the file exporting the commands        [string] [required]
@@ -132,15 +136,19 @@ $ ./cli.js demo --debug  --dryRun
 [13:37:42] Command task [started]
 [13:37:42] Command task ($ pwd) [title changed]
 [13:37:42] Command task ($ pwd) [skipped]
+[13:37:42] → Skipped by --dryRun option
 [13:37:42] Regular task [started]
 [13:37:42] Regular task [skipped]
+[13:37:42] → Skipped by --dryRun option
 [13:37:42] Nested task [started]
 [13:37:42] Another command task [started]
 [13:37:42] Another command task ($ curl https://example.com) [title changed]
 [13:37:42] Another command task ($ curl https://example.com) [skipped]
+[13:37:42] → Skipped by --dryRun option
 [13:37:42] Yet another command task [started]
 [13:37:42] Yet another command task ($ touch file.txt) [title changed]
 [13:37:42] Yet another command task ($ touch file.txt) [skipped]
+[13:37:42] → Skipped by --dryRun option
 [13:37:42] Nested task [completed]
 [13:37:42] Parent task [completed]
 ```

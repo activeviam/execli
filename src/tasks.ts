@@ -18,7 +18,7 @@ type BaseTask = Readonly<{
 }>;
 
 type RequirableTask = Readonly<{
-  // Ignore --only, --skip, and --tag options
+  // Ignore --only and --tag options
   required?: true;
 }>;
 
@@ -64,7 +64,7 @@ type BackgroundCommandPayload<C> = RegularPayload<C> &
 type BackgroundCommandTask<C> = CommandTask<C> &
   Readonly<{
     // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
-    kill?: (process: ExecaChildProcess) => unknown;
+    kill?: (process: ExecaChildProcess) => void;
     match: Readonly<RegExp>;
     // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
     runOnMatch(payload: BackgroundCommandPayload<C>): RunResult;
@@ -86,10 +86,10 @@ type Task<C> = LeafTask<C> | ParentTask<C>;
 const getSkipReason = (optionName: keyof InternalContext) =>
   `Skipped by --${optionName} option`;
 
-const skipByOnlyOption = (
+const skipByOnlyOption = <C extends InternalContext>(
   ancestorWhitelisted: boolean,
   context: InternalContext,
-  title: string,
+  { title }: BaseLeafTask<C>,
 ) => {
   if (
     // A task with an ancester matching the --only option can run.
@@ -106,9 +106,9 @@ const skipByOnlyOption = (
   return getSkipReason("only");
 };
 
-const skipByTagOption = (
+const skipByTagOption = <C extends InternalContext>(
   context: InternalContext,
-  tags: readonly string[] = [],
+  { tags = [] }: BaseLeafTask<C>,
 ) => {
   // If some --tag were given but the task includes none of them, it is skipped.
   if (
@@ -121,14 +121,14 @@ const skipByTagOption = (
   return false;
 };
 
-const skipByOnlyOrTagOptions = (
+const skipByOnlyOrTagOptions = <C extends InternalContext>(
   ancestorWhitelisted: boolean,
   context: InternalContext,
-  title: string,
-  tags?: readonly string[],
+  task: BaseLeafTask<C>,
 ) =>
-  skipByOnlyOption(ancestorWhitelisted, context, title) ||
-  skipByTagOption(context, tags);
+  !task.required &&
+  (skipByOnlyOption(ancestorWhitelisted, context, task) ||
+    skipByTagOption(context, task));
 
 const shouldSkipByTaskProperty = <C>(
   context: Context<C>,
@@ -142,7 +142,7 @@ const shouldSkipByTaskProperty = <C>(
     return result;
   }
 
-  if (!result) {
+  if (result === true) {
     return "Tasked skipped itself";
   }
 
@@ -153,20 +153,9 @@ const skipCommandTask = <C extends InternalContext>(
   ancestorWhitelisted: boolean,
   context: C,
   task: CommandTask<C>,
-): SkipResult => {
-  if (task.required) {
-    return false;
-  }
-
-  return (
-    skipByOnlyOrTagOptions(
-      ancestorWhitelisted,
-      context,
-      task.title,
-      task.tags,
-    ) || shouldSkipByTaskProperty(context, task)
-  );
-};
+): SkipResult =>
+  skipByOnlyOrTagOptions(ancestorWhitelisted, context, task) ||
+  shouldSkipByTaskProperty(context, task);
 
 const addDetailsToTaskTitle = (title: string, details: string) =>
   `${title} (${details})`;
@@ -287,21 +276,13 @@ const createRegularTask = <C extends InternalContext>(
 ): ListrTask<C> =>
   createSkippableTask({
     skip(context) {
-      if (task.required) {
-        return false;
-      }
-
       if (context.dryRun) {
         return getSkipReason("dryRun");
       }
 
       return (
-        skipByOnlyOrTagOptions(
-          ancestorWhitelisted,
-          context,
-          task.title,
-          task.tags,
-        ) || shouldSkipByTaskProperty(context, task)
+        skipByOnlyOrTagOptions(ancestorWhitelisted, context, task) ||
+        shouldSkipByTaskProperty(context, task)
       );
     },
     // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types

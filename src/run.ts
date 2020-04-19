@@ -107,20 +107,23 @@ const getInternalOptions = <C>(
       choices: allTaskTitles,
       coerce: coerceSlugToTitle,
       default: [],
-      description: "Only run the CLI task with this title (or title slug)",
+      description:
+        "Only run the required tasks or those with one of the given titles (or title slugs)",
     },
     skip: {
       array: true,
       choices: allTaskTitles,
       coerce: coerceSlugToTitle,
       default: [],
-      description: "Skip the CLI task with this title (or title slug)",
+      description:
+        "Skip the tasks with one of the given titles (or title slugs)",
     },
     tag: {
       array: true,
       choices: tags.sort(),
       default: [],
-      description: "Only run the CLI task with this tag",
+      description:
+        "Only run the required tasks or those with at least one of the given tags",
     },
   };
 };

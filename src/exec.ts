@@ -8,12 +8,9 @@ type Line = string;
 
 type OutputLine = (line: Line) => void;
 
-type SyncRunResult = Line | void;
-type AsyncRunResult = Promise<SyncRunResult>;
-type RunResult = SyncRunResult | AsyncRunResult;
-
 type SubprocessOptions = Options &
   Readonly<{
+    /** Does not pipe the IO in debug mode and does not output a line for the running command in the corresponding task. */
     silent?: true;
   }>;
 
@@ -63,16 +60,12 @@ const getEnvironmentString = ({ env }: Options) => {
     : bashEnvironmentString;
 };
 
-const getCommandString = (
-  command: Command,
-  options: Options = {},
-  background = false,
-) =>
+const getCommandString = (command: Command, options: Options = {}) =>
   `${
     options.cwd ? `cd ${path.relative(process.cwd(), options.cwd)} && ` : ""
   }${getEnvironmentString(options)}${command
     .map((part) => (part.includes(" ") ? `"${part}"` : part))
-    .join(" ")}${background ? " &" : ""}`;
+    .join(" ")}`;
 
 type Exec = (
   command: Command,
@@ -100,5 +93,4 @@ export {
   getCommandString,
   Line,
   OutputLine,
-  RunResult,
 };

@@ -1,11 +1,13 @@
 import path from "path";
-// @ts-ignore
+// @ts-expect-error
 import ncc from "@zeit/ncc";
 import fs from "fs-extra";
 
 const getSource = (filePath: string) => `#!/usr/bin/env node
 
-const { runCli } = require("../run");
+require("loud-rejection/register");
+
+const { runCli } = require("../commands");
 const commands = require("${filePath}");
 
 runCli(commands);`;
@@ -27,7 +29,6 @@ const compile = async ({
   try {
     const inputPath = path.join(temporaryDirectory, "input.js");
     await fs.writeFile(inputPath, getSource(sourcePath));
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-call
     const { code } = await ncc(inputPath, { minify: true, quiet: true });
     await fs.writeFile(target, code, { mode: 0o744 });
   } finally {

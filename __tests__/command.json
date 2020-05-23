@@ -1,5 +1,11 @@
 {
   "test-command": {
+    "options": {
+      "flag": {
+        "boolean": true,
+        "description": "A flag option"
+      }
+    },
     "task": {
       "children": [
         {
@@ -14,12 +20,6 @@
         }
       ],
       "title": "Parent task"
-    },
-    "options": {
-      "flag": {
-        "boolean": true,
-        "description": "A flag option"
-      }
     }
   }
 }

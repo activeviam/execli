@@ -43,6 +43,11 @@ module.exports = {
     "@typescript-eslint/explicit-function-return-type": "off",
     // We use sort-keys instead.
     "@typescript-eslint/member-ordering": "off",
+    "@typescript-eslint/no-invalid-void-type": "off",
+    "@typescript-eslint/prefer-readonly-parameter-types": [
+      "error",
+      { checkParameterProperties: true },
+    ],
     "@typescript-eslint/require-array-sort-compare": "off",
     // It's useful to use template string to cast expressions to strings.
     "@typescript-eslint/restrict-template-expressions": "off",
@@ -50,11 +55,7 @@ module.exports = {
     // Forbid function declarations
     "func-style": ["error", "expression", { allowArrowFunctions: true }],
     "import/exports-last": "error",
-    "import/extensions": [
-      "error",
-      "always",
-      { js: "never", jsx: "never", ts: "never", tsx: "never" },
-    ],
+    "import/extensions": ["error", "never"],
     "import/first": "error",
     "import/group-exports": "error",
     "import/no-cycle": "error",

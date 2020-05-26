@@ -2,8 +2,8 @@
 
 import { resolve } from "path";
 import createYargs from "yargs/yargs";
+import { runCli } from "./commands";
 import { compile } from "./compile";
-import { runCli } from "./run";
 
 const createCli = () =>
   createYargs(process.argv.slice(2))

@@ -10,53 +10,55 @@ Powered by [listr](https://www.npmjs.com/package/listr) and [yargs](https://www.
 
 ```typescript
 // commands.ts
-import { Command } from "execli";
+import { getCommand, OptionsContext, Task } from "execli";
 
-type DemoContext = {
-  customFlag: boolean;
-};
+const options = {
+  customFlag: {
+    boolean: true,
+    description: "A custom option",
+  },
+} as const;
 
-const demo: Command<DemoContext> = {
-  options: {
-    customFlag: {
-      boolean: true,
-      description: "A custom option",
+type DemoContext = OptionsContext<typeof options>;
+
+const parentTask: Task<DemoContext> = {
+  children: [
+    {
+      command: ["pwd"],
+      title: "Command task",
     },
-  },
-  task: {
-    children: [
-      {
-        command: ["pwd"],
-        title: "Command task",
+    {
+      run({ context: { customFlag, debug } }) {
+        if (debug && customFlag) {
+          console.log("flag given");
+        }
       },
-      {
-        run({ context: { customFlag, debug } }) {
-          if (debug && customFlag) {
-            console.log("flag given");
-          }
+      tags: ["regular"],
+      title: "Regular task",
+    },
+    {
+      children: [
+        {
+          command: ["curl", "https://example.com"],
+          tags: ["network"],
+          title: "Another command task",
         },
-        tags: ["regular"],
-        title: "Regular task",
-      },
-      {
-        children: [
-          {
-            command: ["curl", "https://example.com"],
-            tags: ["network"],
-            title: "Another command task",
-          },
-          {
-            command: ["touch", "file.txt"],
-            tags: ["filesystem"],
-            title: "Yet another command task",
-          },
-        ],
-        title: "Nested task",
-      },
-    ],
-    title: "Parent task",
-  },
+        {
+          command: ["touch", "file.txt"],
+          tags: ["filesystem"],
+          title: "Yet another command task",
+        },
+      ],
+      title: "Nested task",
+    },
+  ],
+  title: "Parent task",
 };
+
+const demo = getCommand({
+  options,
+  task: parentTask,
+});
 
 export { demo };
 ```
@@ -90,12 +92,12 @@ Options:
   --customFlag  A custom option                                                                                                                 [boolean]
   --debug       Run all tasks sequentially, switch to verbose renderer, and stream the output of shell commands
                                                                                     [boolean] [default: false if terminal is interactive, true otherwise]
-  --dryRun      Don't run tasks but show the shell commands that would have been run                                           [boolean] [default: false]
-  --only        Only run the required tasks or those with one of the given titles (or title slugs)
+  --dryRun      Do not run tasks but show the shell commands that would have been run                                          [boolean] [default: false]
+  --only        Only run tasks with one of the given titles (or title slugs)
         [array] [choices: "Another command task", "Command task", "Nested task", "Parent task", "Regular task", "Yet another command task"] [default: []]
-  --skip        Skip the tasks with one of the given titles (or title slugs)
+  --skip        Skip tasks with one of the given titles (or title slugs)
         [array] [choices: "Another command task", "Command task", "Nested task", "Parent task", "Regular task", "Yet another command task"] [default: []]
-  --tag         Only run the required tasks or those with at least one of the given tags
+  --tag         Only run tasks with at least one of the given tags
         [array] [choices: "filesystem", "network", "regular"] [default: []]
 ```
 

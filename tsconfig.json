@@ -1,9 +1,11 @@
 {
   "compilerOptions": {
     "declaration": true,
+    "lib": ["es2019.object", "es2020.string"],
     "sourceMap": true,
     "outDir": "lib",
-    "rootDir": "src"
+    "rootDir": "src",
+    "target": "ES2018"
   },
   "extends": "./tsconfig.base.json",
   "include": ["src"]

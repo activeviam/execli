@@ -215,7 +215,7 @@ const createContextHolder = <C>(
 
   const contextHolder: ContextHolder<C> = {
     add(addedContext) {
-      context = { ...addedContext, ...context };
+      context = { ...context, ...addedContext };
     },
     copy() {
       return createContextHolder(context);

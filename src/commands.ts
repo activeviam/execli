@@ -3,7 +3,7 @@ import isInteractive from "is-interactive";
 import slugify from "slugify";
 import { CommandModule, InferredOptionTypes, Options } from "yargs";
 import createYargs from "yargs/yargs";
-import { InternalContext } from "./context";
+import { InternalOptionsContext } from "./context";
 import { buildFlatTasks, FlatTasks, runTask, Task } from "./tasks";
 
 type CommandOptions = Readonly<{ [key: string]: Options }>;
@@ -51,7 +51,7 @@ const createYargsCommand = <C>(
 
 const getInternalOptions = (
   flatTasks: FlatTasks,
-): { [TKey in keyof InternalContext]: Options } => {
+): { [TKey in keyof InternalOptionsContext]: Options } => {
   const availableTags = new Set<string>();
   const slugToTitle: { [slug: string]: string } = {};
 

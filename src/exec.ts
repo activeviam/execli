@@ -1,6 +1,6 @@
 import path from "path";
 import execa, { ExecaChildProcess, Options, ExecaReturnValue } from "execa";
-import { SharedContext } from "./context";
+import { hideSecrets, InternalContext, SharedContext } from "./context";
 
 type Command = readonly string[];
 
@@ -60,12 +60,19 @@ const getEnvironmentString = ({ env }: Options) => {
     : bashEnvironmentString;
 };
 
-const getCommandString = (command: Command, options: Options = {}) =>
-  `${
-    options.cwd ? `cd ${path.relative(process.cwd(), options.cwd)} && ` : ""
-  }${getEnvironmentString(options)}${command
-    .map((part) => (part.includes(" ") ? `"${part}"` : part))
-    .join(" ")}`;
+const getCommandString = (
+  command: Command,
+  context: InternalContext,
+  options: Options = {},
+) =>
+  hideSecrets(
+    context,
+    `${
+      options.cwd ? `cd ${path.relative(process.cwd(), options.cwd)} && ` : ""
+    }${getEnvironmentString(options)}${command
+      .map((part) => (part.includes(" ") ? `"${part}"` : part))
+      .join(" ")}`,
+  );
 
 type Exec = (
   command: Command,
@@ -73,11 +80,11 @@ type Exec = (
 ) => Promise<ExecaReturnValue>;
 
 const createExec = (
-  context: SharedContext,
+  context: InternalContext,
   outputLine: OutputLine,
 ): Exec => async (command, options = {}) => {
   if (!options.silent) {
-    outputLine(getCommandString(command, options));
+    outputLine(getCommandString(command, context, options));
   }
 
   const subprocess = createSubprocess(command, context, options);

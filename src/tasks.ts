@@ -8,7 +8,10 @@ import {
 import {
   Context,
   ContextLike,
+  ContextHolder,
+  createContextHolder,
   InternalContext,
+  InternalOptionsContext,
   getUserContext,
   SharedContext,
 } from "./context";
@@ -73,6 +76,10 @@ type ParentTask<C, A, B> = BaseTask &
     ? Readonly<{
         addContext: (
           payload: Readonly<{
+            /**
+             * Secrets will be redacted in displayed command strings.
+             */
+            addSecret: (secret: string) => void;
             context: Context<IntersectableContext<C>>;
             exec: Exec;
           }>,
@@ -151,7 +158,7 @@ const buildFlatTasks = (
 };
 
 type SkippedByOption = keyof Pick<
-  InternalContext,
+  InternalOptionsContext,
   "dryRun" | "only" | "skip" | "tag"
 >;
 
@@ -161,7 +168,7 @@ type MutableStaticallySkippedTasks = {
 type StaticallySkippedTasks = Readonly<MutableStaticallySkippedTasks>;
 
 const buildStaticallySkippedTasks = (
-  context: InternalContext,
+  context: InternalOptionsContext,
   flatTasks: FlatTasks,
   taskTitle: string,
   // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
@@ -199,33 +206,6 @@ const buildStaticallySkippedTasks = (
   }
 
   return staticallySkippedTasks;
-};
-
-/** Used to hold a mutable reference to some context to prevent destructuring it too early. */
-type ContextHolder<C> = Readonly<{
-  add: (addedContext: Readonly<ContextLike>) => void;
-  copy: () => ContextHolder<C>;
-  get: () => Context<C> & InternalContext;
-}>;
-
-const createContextHolder = <C>(
-  initialContext: Context<C> & InternalContext,
-) => {
-  let context = initialContext;
-
-  const contextHolder: ContextHolder<C> = {
-    add(addedContext) {
-      context = { ...context, ...addedContext };
-    },
-    copy() {
-      return createContextHolder(context);
-    },
-    get() {
-      return context;
-    },
-  };
-
-  return contextHolder;
 };
 
 const getSkipReason = (option: SkippedByOption) =>
@@ -337,7 +317,7 @@ const processCommandProperties = <C>(
   }
 
   if (context.dryRun) {
-    const commandString = getCommandString(command, options);
+    const commandString = getCommandString(command, context, options);
     taskWrapper.title = addDetailsToTaskTitle(title, `$ ${commandString}`);
     taskWrapper.skip(getSkipReason("dryRun"));
     return;
@@ -357,8 +337,8 @@ const createOutputLine = (taskWrapper: ListrTaskWrapper<void>): OutputLine => (
   taskWrapper.output = line;
 };
 
-const createSkippableTask = (
-  context: InternalContext,
+const createSkippableTask = <C>(
+  context: Context<C> & InternalContext,
   skippedTasks: StaticallySkippedTasks,
   task: Readonly<ListrTask<void>>,
 ): ListrTask<void> => ({
@@ -550,14 +530,9 @@ const createParentTask = <C, A, B>(
               });
 
               backgroundProcess = startedBackgroundProcess.backgroundProcess;
-              const namedCapturedGroups =
-                startedBackgroundProcess.namedCapturedGroups;
 
-              ownContextHolder.add(namedCapturedGroups);
-              outputLine(
-                `Added context from background process: ${JSON.stringify(
-                  namedCapturedGroups,
-                )}`,
+              ownContextHolder.add(
+                startedBackgroundProcess.namedCapturedGroups,
               );
             },
             title: backgroundProcessStartingTaskTitle,
@@ -615,13 +590,15 @@ const createParentTask = <C, A, B>(
                 A & ContextLike,
                 B
               >).addContext({
+                addSecret(secret) {
+                  ownContextHolder.addSecret(secret);
+                },
                 context: getUserContext(
                   context as Context<IntersectableContext<C>> & InternalContext,
                 ),
                 exec,
               });
               ownContextHolder.add(addedContext);
-              outputLine(`Added context: ${JSON.stringify(addedContext)}`);
             },
             title: `${task.title} [adding context]`,
           },
@@ -684,7 +661,7 @@ const handleError = (context: SharedContext, error: any) => {
 
 const runTask = async <C>(
   task: Task<C>,
-  context: InternalContext & Context<C>,
+  context: Context<C> & InternalOptionsContext,
   flatTasks: FlatTasks,
 ): Promise<void> => {
   try {

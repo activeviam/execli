@@ -1,5 +1,5 @@
 import { ExecaChildProcess, Options } from "execa";
-import { ContextLike, SharedContext } from "./context";
+import { ContextLike, InternalContext } from "./context";
 import {
   Command,
   OutputLine,
@@ -15,7 +15,7 @@ const startBackgroundProcess = async <C extends ContextLike<string>>({
   outputLine,
 }: Readonly<{
   command: Command;
-  context: SharedContext;
+  context: InternalContext;
   match: Readonly<RegExp>;
   options?: Readonly<Options>;
   outputLine: OutputLine;
@@ -23,7 +23,7 @@ const startBackgroundProcess = async <C extends ContextLike<string>>({
   backgroundProcess: ExecaChildProcess;
   namedCapturedGroups: C;
 }> => {
-  const commandString = getCommandString(command, options);
+  const commandString = getCommandString(command, context, options);
   outputLine(commandString);
   const backgroundProcess = createSubprocess(command, context, {
     ...options,

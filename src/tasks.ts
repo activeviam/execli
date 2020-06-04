@@ -577,11 +577,6 @@ const createParentTask = <C, A, B>(
           {
             // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
             async task(_, taskWrapper) {
-              if (dryRun) {
-                taskWrapper.skip(getSkipReason("dryRun"));
-                return;
-              }
-
               const context = ownContextHolder.get();
               const outputLine = createOutputLine(taskWrapper);
               const exec = createExec(context, outputLine);
@@ -665,10 +660,14 @@ const runTask = async <C>(
   flatTasks: FlatTasks,
 ): Promise<void> => {
   try {
+    const internalContext: Context<C> & InternalContext = {
+      ...context,
+      secrets: [],
+    };
     await new Listr(
       [
         createListrTask(
-          createContextHolder(context),
+          createContextHolder(internalContext),
           buildStaticallySkippedTasks(context, flatTasks, task.title),
           task,
         ),

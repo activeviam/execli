@@ -48,10 +48,9 @@ type ContextHolder<C> = Readonly<{
 }>;
 
 const createContextHolder = <C>(
-  initialContext: Context<C> & InternalOptionsContext,
+  initialContext: Context<C> & InternalContext,
 ) => {
-  const initialSecrets: string[] = [];
-  let context = { ...initialContext, secrets: initialSecrets };
+  let context = { ...initialContext, secrets: initialContext.secrets || [] };
 
   const contextHolder: ContextHolder<C> = {
     add(addedContext) {
@@ -81,7 +80,8 @@ const createContextHolder = <C>(
 const hideSecrets = ({ secrets }: InternalContext, text: string): string =>
   // eslint-disable-next-line unicorn/no-reduce
   secrets.reduce(
-    (safeText, secret) => safeText.split(secret).join("***"),
+    (safeText, secret) =>
+      safeText.split(secret).join("*".repeat(Math.min(20, secret.length))),
     text,
   );
 

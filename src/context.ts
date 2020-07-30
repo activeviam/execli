@@ -8,9 +8,11 @@ type ContextLike<V = unknown> = Record<string, V>;
 
 type InternalOptionsContext = Context<{
   dryRun: boolean;
+  from: string | undefined;
   only: readonly string[];
   skip: readonly string[];
   tag: readonly string[];
+  until: string | undefined;
 }>;
 
 type InternalContext = InternalOptionsContext &
@@ -29,10 +31,12 @@ const getUserContext = <CustomContext>(
     // @ts-expect-error
     "dry-run": _2,
     dryRun,
+    from,
     only,
     secrets,
     skip,
     tag,
+    until,
     ...userContext
   } = context;
   // @ts-expect-error

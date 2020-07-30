@@ -93,12 +93,16 @@ Options:
   --debug       Run all tasks sequentially, switch to verbose renderer, and stream the output of shell commands
                                                                                     [boolean] [default: false if terminal is interactive, true otherwise]
   --dryRun      Do not run tasks but show the shell commands that would have been run                                          [boolean] [default: false]
+  --from        Skip tasks before the one with the given title (or title slug)
+                              [choices: "Another command task", "Command task", "Nested task", "Parent task", "Regular task", "Yet another command task"]
   --only        Only run tasks with one of the given titles (or title slugs)
         [array] [choices: "Another command task", "Command task", "Nested task", "Parent task", "Regular task", "Yet another command task"] [default: []]
   --skip        Skip tasks with one of the given titles (or title slugs)
         [array] [choices: "Another command task", "Command task", "Nested task", "Parent task", "Regular task", "Yet another command task"] [default: []]
   --tag         Only run tasks with at least one of the given tags
         [array] [choices: "filesystem", "network", "regular"] [default: []]
+  --until       Skip tasks after the one with the given title (or title slug)
+                              [choices: "Another command task", "Command task", "Nested task", "Parent task", "Regular task", "Yet another command task"]
 ```
 
 ```

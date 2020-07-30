@@ -55,7 +55,7 @@ const getEnvironmentString = ({ env }: Options) => {
     )
     .join(" ")} `;
 
-  return process.env.SHELL && process.env.SHELL.endsWith("fish")
+  return process.env.SHELL?.endsWith("fish")
     ? `env ${bashEnvironmentString}`
     : bashEnvironmentString;
 };

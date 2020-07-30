@@ -17,6 +17,11 @@
           "command": ["ls"],
           "tags": ["b"],
           "title": "List content of directory"
+        },
+        {
+          "command": ["ps"],
+          "tags": ["c"],
+          "title": "List current processes"
         }
       ],
       "title": "Parent task"

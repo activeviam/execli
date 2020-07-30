@@ -159,13 +159,32 @@ const buildFlatTasks = (
 
 type SkippedByOption = keyof Pick<
   InternalOptionsContext,
-  "dryRun" | "only" | "skip" | "tag"
+  "dryRun" | "from" | "only" | "skip" | "tag" | "until"
 >;
 
 type MutableStaticallySkippedTasks = {
   [title: string]: Exclude<SkippedByOption, "dryRun">;
 };
 type StaticallySkippedTasks = Readonly<MutableStaticallySkippedTasks>;
+
+const getAncestorTitles = (
+  flatTasks: FlatTasks,
+  taskTitle: string,
+): Set<string> => {
+  const ancestorTitles = new Set<string>();
+  let currentTitle: string | undefined = taskTitle;
+
+  while (true) {
+    currentTitle = flatTasks[currentTitle].parentTitle;
+    if (currentTitle === undefined) {
+      break;
+    } else {
+      ancestorTitles.add(currentTitle);
+    }
+  }
+
+  return ancestorTitles;
+};
 
 const buildStaticallySkippedTasks = (
   context: InternalOptionsContext,
@@ -174,11 +193,40 @@ const buildStaticallySkippedTasks = (
   // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
   staticallySkippedTasks: MutableStaticallySkippedTasks = {},
   ancestorMatchedOnlyOption = false,
+  isRootCall = true,
   // eslint-disable-next-line max-params
 ): StaticallySkippedTasks => {
   const matchedOnlyOption =
     ancestorMatchedOnlyOption || context.only.includes(taskTitle);
   const task = flatTasks[taskTitle];
+
+  if (isRootCall) {
+    if (context.from !== undefined || context.until !== undefined) {
+      const orderedTaskTitles = Object.keys(flatTasks);
+
+      if (context.until !== undefined) {
+        orderedTaskTitles
+          .slice(orderedTaskTitles.indexOf(context.until) + 1)
+          .forEach((title) => {
+            staticallySkippedTasks[title] = "until";
+          });
+      }
+
+      if (context.from !== undefined) {
+        const ancestorTitles = getAncestorTitles(flatTasks, context.from);
+
+        orderedTaskTitles
+          .slice(0, orderedTaskTitles.indexOf(context.from))
+          .filter(
+            (title) =>
+              !staticallySkippedTasks[title] && !ancestorTitles.has(title),
+          )
+          .forEach((title) => {
+            staticallySkippedTasks[title] = "from";
+          });
+      }
+    }
+  }
 
   if (staticallySkippedTasks[taskTitle]) {
     // NOP
@@ -192,6 +240,7 @@ const buildStaticallySkippedTasks = (
         childTaskTitle,
         staticallySkippedTasks,
         matchedOnlyOption,
+        false,
       );
     });
   } else if (context.only.length > 0 && !matchedOnlyOption) {
@@ -344,8 +393,9 @@ const createSkippableTask = <C>(
 ): ListrTask<void> => ({
   ...task,
   skip() {
-    if (skippedTasks[task.title] === "skip") {
-      return getSkipReason("skip");
+    const option = skippedTasks[task.title];
+    if (option === "from" || option === "skip" || option === "until") {
+      return getSkipReason(option);
     }
 
     return shouldSkipByTaskProperty(context, task);

@@ -75,8 +75,11 @@ const getInternalOptions = (
 
   const availableTitles = Object.values(slugToTitle).sort();
 
-  const coerceSlugToTitle = (elements: readonly string[]): string[] =>
-    elements.map((element) => slugToTitle[element] || element);
+  const coerceSlugToTitle = (element: string): string =>
+    slugToTitle[element] || element;
+
+  const coerceSlugToTitleArray = (elements: readonly string[]): string[] =>
+    elements.map((element) => coerceSlugToTitle(element));
 
   return {
     debug: {
@@ -92,10 +95,16 @@ const getInternalOptions = (
       description:
         "Do not run tasks but show the shell commands that would have been run",
     },
+    from: {
+      choices: availableTitles,
+      coerce: coerceSlugToTitle,
+      description:
+        "Skip tasks before the one with the given title (or title slug)",
+    },
     only: {
       array: true,
       choices: availableTitles,
-      coerce: coerceSlugToTitle,
+      coerce: coerceSlugToTitleArray,
       default: [],
       description:
         "Only run tasks with one of the given titles (or title slugs)",
@@ -103,7 +112,7 @@ const getInternalOptions = (
     skip: {
       array: true,
       choices: availableTitles,
-      coerce: coerceSlugToTitle,
+      coerce: coerceSlugToTitleArray,
       default: [],
       description: "Skip tasks with one of the given titles (or title slugs)",
     },
@@ -112,6 +121,12 @@ const getInternalOptions = (
       choices: [...availableTags].sort(),
       default: [],
       description: "Only run tasks with at least one of the given tags",
+    },
+    until: {
+      choices: availableTitles,
+      coerce: coerceSlugToTitle,
+      description:
+        "Skip tasks after the one with the given title (or title slug)",
     },
   };
 };
@@ -146,4 +161,4 @@ const runCli = async (commands: Commands, argv?: string[]) => {
     .wrap(yargs.terminalWidth()).argv;
 };
 
-export { Command, getCommand, OptionsContext, runCli, runTask };
+export { Command, getCommand, OptionsContext, runCli };

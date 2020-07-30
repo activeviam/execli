@@ -57,12 +57,24 @@ describe("run", () => {
       },
     ],
     [
+      "from",
+      [...runTestCommandArguments, "--from", "List content of directory"],
+      {
+        outputs: [
+          "Print current directory [skipped]",
+          "List content of directory [completed]",
+          "List current processes [completed]",
+        ],
+      },
+    ],
+    [
       "only (exact)",
       [...runTestCommandArguments, "--only", "Print current directory"],
       {
         outputs: [
           "Print current directory [completed]",
           "List content of directory [skipped]",
+          "List current processes [skipped]",
         ],
       },
     ],
@@ -73,6 +85,7 @@ describe("run", () => {
         outputs: [
           "Print current directory [completed]",
           "List content of directory [skipped]",
+          "List current processes [skipped]",
         ],
       },
     ],
@@ -91,6 +104,7 @@ describe("run", () => {
         outputs: [
           "Print current directory [skipped]",
           "List content of directory [completed]",
+          "List current processes [completed]",
         ],
       },
     ],
@@ -101,6 +115,7 @@ describe("run", () => {
         outputs: [
           "Print current directory [skipped]",
           "List content of directory [completed]",
+          "List current processes [completed]",
         ],
       },
     ],
@@ -119,15 +134,27 @@ describe("run", () => {
         outputs: [
           "Print current directory [completed]",
           "List content of directory [skipped]",
+          "List current processes [skipped]",
         ],
       },
     ],
     [
       "tag (unexisting)",
-      [...runTestCommandArguments, "--tag", "c"],
+      [...runTestCommandArguments, "--tag", "d"],
       {
         failed: true,
         outputs: ["Invalid values"],
+      },
+    ],
+    [
+      "until",
+      [...runTestCommandArguments, "--until", "List content of directory"],
+      {
+        outputs: [
+          "Print current directory [completed]",
+          "List content of directory [completed]",
+          "List current processes [skipped]",
+        ],
       },
     ],
   ])(

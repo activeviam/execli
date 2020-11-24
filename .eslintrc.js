@@ -39,6 +39,11 @@ module.exports = {
   rules: {
     // @actions/github uses a lot of snake_case keys.
     "@typescript-eslint/camelcase": "off",
+    // Index signatures provide better safety when used with --noUncheckedIndexedAccess.
+    "@typescript-eslint/consistent-indexed-object-style": [
+      "error",
+      "index-signature",
+    ],
     // TypeScript is good at type inference and already requires types where they matter: exported symbols.
     "@typescript-eslint/explicit-function-return-type": "off",
     // We use sort-keys instead.

@@ -20,7 +20,8 @@ const createSubprocess = (
   options: SubprocessOptions = {},
 ): ExecaChildProcess => {
   const [file, ...arguments_] = command;
-  const subprocess = execa(file, arguments_, options);
+  const subprocess = execa(file!, arguments_, options);
+
   if (context.debug && !options.silent) {
     if (subprocess.stdout) {
       subprocess.stdout.pipe(process.stdout);
@@ -70,7 +71,7 @@ const getCommandString = (
     `${
       options.cwd ? `cd ${path.relative(process.cwd(), options.cwd)} && ` : ""
     }${getEnvironmentString(options)}${command
-      .map((part) => (part.includes(" ") ? `"${part}"` : part))
+      .map(part => (part.includes(" ") ? `"${part}"` : part))
       .join(" ")}`,
   );
 

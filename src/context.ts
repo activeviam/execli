@@ -4,7 +4,7 @@ type SharedContext = Readonly<{
 
 type Context<CustomContext> = SharedContext & Readonly<CustomContext>;
 
-type ContextLike<V = unknown> = Record<string, V>;
+type ContextLike<V = unknown> = { [key: string]: V };
 
 type InternalOptionsContext = Context<{
   dryRun: boolean;

@@ -171,7 +171,7 @@ describe("run", () => {
         reject: !failed,
       });
       expect(result.failed).toBe(failed);
-      outputs.forEach((output) => {
+      outputs.forEach(output => {
         expect(failed ? result.stderr : result.stdout).toContain(output);
       });
     },

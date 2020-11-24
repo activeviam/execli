@@ -67,7 +67,7 @@ const getInternalOptions = (
     slugToTitle[slug] = title;
 
     if ("tags" in taskNode) {
-      (taskNode.tags ?? []).forEach((tag) => {
+      (taskNode.tags ?? []).forEach(tag => {
         availableTags.add(tag);
       });
     }
@@ -76,10 +76,10 @@ const getInternalOptions = (
   const availableTitles = Object.values(slugToTitle).sort();
 
   const coerceSlugToTitle = (element: string): string =>
-    slugToTitle[element] || element;
+    slugToTitle[element] ?? element;
 
   const coerceSlugToTitleArray = (elements: readonly string[]): string[] =>
-    elements.map((element) => coerceSlugToTitle(element));
+    elements.map(element => coerceSlugToTitle(element));
 
   return {
     debug: {

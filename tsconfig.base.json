@@ -3,6 +3,7 @@
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "module": "commonjs",
+    "noUncheckedIndexedAccess": true,
     "noEmitOnError": true,
     "strict": true
   }

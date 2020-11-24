@@ -149,7 +149,7 @@ const buildFlatTasks = (
   };
 
   if (isParentTask(task)) {
-    Object.values(task.children).forEach((childTask) => {
+    Object.values(task.children).forEach(childTask => {
       buildFlatTasks(childTask, flatTasks, task.title);
     });
   }
@@ -175,7 +175,7 @@ const getAncestorTitles = (
   let currentTitle: string | undefined = taskTitle;
 
   while (true) {
-    currentTitle = flatTasks[currentTitle].parentTitle;
+    currentTitle = flatTasks[currentTitle]!.parentTitle;
     if (currentTitle === undefined) {
       break;
     } else {
@@ -198,7 +198,7 @@ const buildStaticallySkippedTasks = (
 ): StaticallySkippedTasks => {
   const matchedOnlyOption =
     ancestorMatchedOnlyOption || context.only.includes(taskTitle);
-  const task = flatTasks[taskTitle];
+  const task = flatTasks[taskTitle]!;
 
   if (isRootCall) {
     if (context.from !== undefined || context.until !== undefined) {
@@ -207,7 +207,7 @@ const buildStaticallySkippedTasks = (
       if (context.until !== undefined) {
         orderedTaskTitles
           .slice(orderedTaskTitles.indexOf(context.until) + 1)
-          .forEach((title) => {
+          .forEach(title => {
             staticallySkippedTasks[title] = "until";
           });
       }
@@ -218,10 +218,10 @@ const buildStaticallySkippedTasks = (
         orderedTaskTitles
           .slice(0, orderedTaskTitles.indexOf(context.from))
           .filter(
-            (title) =>
+            title =>
               !staticallySkippedTasks[title] && !ancestorTitles.has(title),
           )
-          .forEach((title) => {
+          .forEach(title => {
             staticallySkippedTasks[title] = "from";
           });
       }
@@ -233,7 +233,7 @@ const buildStaticallySkippedTasks = (
   } else if (context.skip.length > 0 && context.skip.includes(taskTitle)) {
     staticallySkippedTasks[taskTitle] = "skip";
   } else if ("children" in task) {
-    task.children?.forEach((childTaskTitle) => {
+    task.children?.forEach(childTaskTitle => {
       buildStaticallySkippedTasks(
         context,
         flatTasks,
@@ -248,7 +248,7 @@ const buildStaticallySkippedTasks = (
   } else if (
     context.tag.length > 0 &&
     context.tag.every(
-      (givenTag) => !(("tags" in task && task.tags) || []).includes(givenTag),
+      givenTag => !(("tags" in task && task.tags) || []).includes(givenTag),
     )
   ) {
     staticallySkippedTasks[taskTitle] = "tag";
@@ -268,7 +268,7 @@ const skipByOnlyOption = (
 const skipByTagOption = (skippedTasks: StaticallySkippedTasks, title: string) =>
   skippedTasks[title] === "tag" ? getSkipReason("tag") : false;
 
-const skipByOnlyOrTagOptions = <C>(
+const skipByOnlyOrTagOptions = (
   skippedTasks: StaticallySkippedTasks,
   title: string,
 ) =>
@@ -375,10 +375,10 @@ const processCommandProperties = <C>(
   return { command, options };
 };
 
-// eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
-const createOutputLine = (taskWrapper: ListrTaskWrapper<void>): OutputLine => (
-  line,
-) => {
+const createOutputLine = (
+  // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
+  taskWrapper: ListrTaskWrapper<void>,
+): OutputLine => line => {
   if (/\r?\n/.test(line)) {
     throw new Error(`Output line cannot contain line break:\n\n: ${line}`);
   }
@@ -481,7 +481,7 @@ const getStaticParentTaskSkipReason = <A, B, C>(
   }
 
   if (
-    task.children.every((childTask) =>
+    task.children.every(childTask =>
       isParentTask(childTask)
         ? getStaticParentTaskSkipReason(skippedTasks, childTask)
         : skippedTasks[childTask.title],
@@ -522,7 +522,7 @@ const createParentTask = <C, A, B>(
       const { debug, dryRun } = ownContextHolder.get();
 
       let childrenTask = new Listr(
-        task.children.map((childTask) =>
+        task.children.map(childTask =>
           createListrTask(
             ownContextHolder,
             skippedTasks,
@@ -537,13 +537,18 @@ const createParentTask = <C, A, B>(
 
       if ("background" in task) {
         const childrenTaskWithBackgroundProcess = childrenTask;
+
         const {
-          command: commandOrCommandGetter,
-          kill,
-          match,
-          options: optionsOrOptionsGetter,
-        } = (task as ParentTask<C, A, B & ContextLike<string>>).background;
-        const backgroundProcessStartingTaskTitle = `${task.title} [starting background process]`;
+          background: {
+            command: commandOrCommandGetter,
+            kill,
+            match,
+            options: optionsOrOptionsGetter,
+          },
+          title
+        } = task as ParentTask<C, A, B & ContextLike<string>>;
+
+        const backgroundProcessStartingTaskTitle = `${title} [starting background process]`;
 
         let backgroundProcess: ExecaChildProcess;
 
@@ -562,7 +567,7 @@ const createParentTask = <C, A, B>(
                   options: optionsOrOptionsGetter,
                 },
                 context,
-                task.title,
+                title,
                 taskWrapper,
               );
 
@@ -593,7 +598,7 @@ const createParentTask = <C, A, B>(
                 [
                   {
                     task: () => childrenTaskWithBackgroundProcess,
-                    title: `${task.title} [with background process main]`,
+                    title: `${title} [with background process main]`,
                   },
                   {
                     // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
@@ -608,7 +613,7 @@ const createParentTask = <C, A, B>(
                         stopBackgroundProcess({ backgroundProcess, kill });
                       }
                     },
-                    title: `${task.title} [stopping background process]`,
+                    title: `${title} [stopping background process]`,
                   },
                 ],
                 {
@@ -616,13 +621,21 @@ const createParentTask = <C, A, B>(
                   exitOnError: false,
                 },
               ),
-            title: `${task.title} [with background process group]`,
+            title: `${title} [with background process group]`,
           },
         ]);
       }
 
       if ("addContext" in task) {
         const childrenTaskWithAdddedContext = childrenTask;
+
+        const parentTaskWithAddContext = task as ParentTask<
+        C,
+        A & ContextLike,
+        B
+      >;
+      const {title} = parentTaskWithAddContext;
+
         childrenTask = new Listr([
           {
             // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
@@ -630,11 +643,7 @@ const createParentTask = <C, A, B>(
               const context = ownContextHolder.get();
               const outputLine = createOutputLine(taskWrapper);
               const exec = createExec(context, outputLine);
-              const addedContext = await (task as ParentTask<
-                C,
-                A & ContextLike,
-                B
-              >).addContext({
+              const addedContext = await parentTaskWithAddContext.addContext({
                 addSecret(secret) {
                   ownContextHolder.addSecret(secret);
                 },
@@ -645,11 +654,11 @@ const createParentTask = <C, A, B>(
               });
               ownContextHolder.add(addedContext);
             },
-            title: `${task.title} [adding context]`,
+            title: `${title} [adding context]`,
           },
           {
             task: () => childrenTaskWithAdddedContext,
-            title: `${task.title} [with added context]`,
+            title: `${title} [with added context]`,
           },
         ]);
       }
@@ -732,7 +741,7 @@ const runTask = async <C>(
             renderer: "update",
           },
     ).run();
-  } catch (error) {
+  } catch (error: unknown) {
     handleError(context, error);
     throw error;
   }

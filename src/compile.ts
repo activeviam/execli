@@ -1,6 +1,6 @@
 import path from "path";
 // @ts-expect-error
-import ncc from "@zeit/ncc";
+import ncc from "@vercel/ncc";
 import fs from "fs-extra";
 
 const getSource = (filePath: string) => `#!/usr/bin/env node

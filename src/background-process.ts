@@ -34,7 +34,7 @@ const startBackgroundProcess = async <C extends ContextLike<string>>({
   const stdoutChunks: Buffer[] = [];
 
   const matches = await Promise.race([
-    new Promise<RegExpExecArray>((resolve) => {
+    new Promise<RegExpExecArray>(resolve => {
       [
         { chunks: stderrChunks, stream: backgroundProcess.stderr },
         { chunks: stdoutChunks, stream: backgroundProcess.stdout },
@@ -80,7 +80,7 @@ const startBackgroundProcess = async <C extends ContextLike<string>>({
 const stopBackgroundProcess = ({
   backgroundProcess,
   // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
-  kill = (backgroundProcess) => {
+  kill = backgroundProcess => {
     backgroundProcess.kill("SIGTERM", { forceKillAfterTimeout: 30000 });
   },
 }: Readonly<{

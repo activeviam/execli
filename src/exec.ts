@@ -1,12 +1,18 @@
+import os from "os";
 import path from "path";
-import execa, { ExecaChildProcess, Options, ExecaReturnValue } from "execa";
-import { hideSecrets, InternalContext, SharedContext } from "./context";
+import execa, {
+  ExecaChildProcess,
+  Options,
+  ExecaReturnValue,
+  ExecaError,
+} from "execa";
+import { hideSecrets, InternalContext, SharedContext } from "./context.js";
 
-type Command = readonly string[];
+export type Command = readonly string[];
 
-type Line = string;
+export type Line = string;
 
-type OutputLine = (line: Line) => void;
+export type OutputLine = (line: Line) => void;
 
 type SubprocessOptions = Options &
   Readonly<{
@@ -14,24 +20,82 @@ type SubprocessOptions = Options &
     silent?: true;
   }>;
 
-const createSubprocess = (
+const isExecaError = (error: unknown): error is ExecaError =>
+  error instanceof Error && "command" in error && "isCanceled" in error;
+
+export class ExecError extends Error {
+  readonly error: string;
+  readonly stderr: string;
+  readonly stdout: string;
+
+  constructor({
+    error,
+    stderr,
+    stdout,
+  }: Readonly<{
+    error: string;
+    exitCode?: number;
+    stderr: string;
+    stdout: string;
+  }>) {
+    super("Command failed");
+    this.error = error;
+    this.stderr = stderr.trim();
+    this.stdout = stdout.trim();
+  }
+
+  toDetailedError({ withOutputs }: Readonly<{ withOutputs: boolean }>) {
+    return new Error(
+      [
+        this.error,
+        ...(withOutputs
+          ? [
+              ...(this.stdout.length > 0 ? ["STDOUT:", this.stdout] : []),
+              ...(this.stderr.length > 0 ? ["STDERR:", this.stderr] : []),
+            ]
+          : []),
+      ].join(os.EOL),
+    );
+  }
+
+  // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
+  static fromExecaError({ shortMessage: error, stderr, stdout }: ExecaError) {
+    return new ExecError({
+      error,
+      stderr,
+      stdout,
+    });
+  }
+}
+
+export const createSubprocess = (
   command: Command,
   context: SharedContext,
   options: SubprocessOptions = {},
 ): ExecaChildProcess => {
   const [file, ...arguments_] = command;
-  const subprocess = execa(file, arguments_, options);
-  if (context.debug && !options.silent) {
-    if (subprocess.stdout) {
-      subprocess.stdout.pipe(process.stdout);
+
+  try {
+    const subprocess = execa(file, arguments_, options);
+
+    if (context.debug && !options.silent) {
+      if (subprocess.stdout) {
+        subprocess.stdout.pipe(process.stdout);
+      }
+
+      if (subprocess.stderr) {
+        subprocess.stderr.pipe(process.stderr);
+      }
     }
 
-    if (subprocess.stderr) {
-      subprocess.stderr.pipe(process.stderr);
+    return subprocess;
+  } catch (error: unknown) {
+    if (isExecaError(error)) {
+      throw ExecError.fromExecaError(error);
     }
+
+    throw error;
   }
-
-  return subprocess;
 };
 
 const getEnvironmentString = ({ env }: Options) => {
@@ -48,19 +112,17 @@ const getEnvironmentString = ({ env }: Options) => {
       .join("&&")}&&`;
   }
 
-  const bashEnvironmentString = `${Object.entries(env)
+  const environmentString = `${Object.entries(env)
     .map(
       ([key, value]: readonly [string, string | undefined]) =>
         `${key}=${value}`,
     )
     .join(" ")} `;
 
-  return process.env.SHELL?.endsWith("fish")
-    ? `env ${bashEnvironmentString}`
-    : bashEnvironmentString;
+  return environmentString;
 };
 
-const getCommandString = (
+export const getCommandString = (
   command: Command,
   context: InternalContext,
   options: Options = {},
@@ -74,30 +136,28 @@ const getCommandString = (
       .join(" ")}`,
   );
 
-type Exec = (
+export type Exec = (
   command: Command,
   options?: SubprocessOptions,
 ) => Promise<ExecaReturnValue>;
 
-const createExec = (
-  context: InternalContext,
-  outputLine: OutputLine,
-): Exec => async (command, options = {}) => {
-  if (!options.silent) {
-    outputLine(getCommandString(command, context, options));
-  }
+export const createExec =
+  (context: InternalContext, outputLine: OutputLine): Exec =>
+  async (command, options = {}) => {
+    if (!options.silent) {
+      outputLine(getCommandString(command, context, options));
+    }
 
-  const subprocess = createSubprocess(command, context, options);
-  const result = await subprocess;
-  return result;
-};
+    const subprocess = createSubprocess(command, context, options);
 
-export {
-  Command,
-  Exec,
-  createExec,
-  createSubprocess,
-  getCommandString,
-  Line,
-  OutputLine,
-};
+    try {
+      const result = await subprocess;
+      return result;
+    } catch (error: unknown) {
+      if (isExecaError(error)) {
+        throw ExecError.fromExecaError(error);
+      }
+
+      throw error;
+    }
+  };

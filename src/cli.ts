@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 
-import { resolve } from "path";
-import createYargs from "yargs/yargs";
-import { runCli } from "./commands";
-import { compile } from "./compile";
+import yargs from "yargs";
+import { hideBin } from "yargs/helpers";
+import { runCli, Command } from "./commands.js";
+import { compile } from "./compile.js";
 
-const createCli = () =>
-  createYargs(process.argv.slice(2))
+export const createCli = () =>
+  yargs(hideBin(process.argv))
     .command(
       "compile <source> <target>",
       "Compile the commands at the given path to a single executable Node.js file, together with all the dependencies",
@@ -45,15 +45,12 @@ const createCli = () =>
         _: readonly string[];
         path: string;
       }>) => {
-        const commandPath = resolve(path);
-        // eslint-disable-next-line @typescript-eslint/no-var-requires
-        const commands = require(commandPath);
+        const commands = (await import(path)) as Readonly<{
+          [key: string]: Command<any>;
+        }>;
         await runCli(commands, commandArgv);
       },
     )
     .demandCommand(1)
-    .help()
     .strict()
     .version(false);
-
-export { createCli };

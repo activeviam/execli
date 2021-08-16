@@ -1,8 +1,7 @@
 #!/usr/bin/env node
 
-import "loud-rejection/register";
+import "loud-rejection/register.js";
 
-import { createCli } from "./cli";
+import { createCli } from "./cli.js";
 
-// eslint-disable-next-line @typescript-eslint/no-unused-expressions
-createCli().argv;
+void createCli().argv;

@@ -1,13 +1,14 @@
 import { ExecaChildProcess, Options } from "execa";
-import { ContextLike, InternalContext } from "./context";
+import { ContextLike, InternalContext } from "./context.js";
 import {
   Command,
+  ExecError,
   OutputLine,
   getCommandString,
   createSubprocess,
-} from "./exec";
+} from "./exec.js";
 
-const startBackgroundProcess = async <C extends ContextLike<string>>({
+export const startBackgroundProcess = async <C extends ContextLike<string>>({
   command,
   context,
   match,
@@ -35,39 +36,34 @@ const startBackgroundProcess = async <C extends ContextLike<string>>({
 
   const matches = await Promise.race([
     new Promise<RegExpExecArray>((resolve) => {
-      [
+      for (const { chunks, stream } of [
         { chunks: stderrChunks, stream: backgroundProcess.stderr },
         { chunks: stdoutChunks, stream: backgroundProcess.stdout },
-      ].forEach(
-        // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
-        ({ chunks, stream }) => {
-          if (stream !== null) {
-            // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
-            const listener = (chunk: Buffer) => {
-              chunks.push(chunk);
-              const localMatches = match.exec(String(chunk));
-              if (localMatches) {
-                stream.removeListener("data", listener);
-                resolve(localMatches);
-              }
-            };
+      ]) {
+        if (stream !== null) {
+          // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
+          const listener = (chunk: Buffer) => {
+            chunks.push(chunk);
+            const localMatches = match.exec(String(chunk));
+            if (localMatches) {
+              stream.removeListener("data", listener);
+              resolve(localMatches);
+            }
+          };
 
-            stream.addListener("data", listener);
-          }
-        },
-      );
+          stream.addListener("data", listener);
+        }
+      }
     }),
     backgroundProcess,
   ]);
 
   if (!Array.isArray(matches)) {
-    const error = new Error(
-      "The background process exited before matching the given regexp",
-    ) as any;
-    error.command = commandString;
-    error.stderr = String(Buffer.concat(stderrChunks));
-    error.stdout = String(Buffer.concat(stdoutChunks));
-    throw error;
+    throw new ExecError({
+      error: `Background process exited before matching the regexp. Command was: ${command}`,
+      stderr: String(Buffer.concat(stderrChunks)),
+      stdout: String(Buffer.concat(stdoutChunks)),
+    });
   }
 
   return {
@@ -77,11 +73,11 @@ const startBackgroundProcess = async <C extends ContextLike<string>>({
 };
 
 // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
-const stopBackgroundProcess = ({
+export const stopBackgroundProcess = ({
   backgroundProcess,
   // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
   kill = (backgroundProcess) => {
-    backgroundProcess.kill("SIGTERM", { forceKillAfterTimeout: 30000 });
+    backgroundProcess.kill("SIGTERM", { forceKillAfterTimeout: 30_000 });
   },
 }: Readonly<{
   backgroundProcess: ExecaChildProcess;
@@ -90,5 +86,3 @@ const stopBackgroundProcess = ({
 }>) => {
   kill(backgroundProcess);
 };
-
-export { startBackgroundProcess, stopBackgroundProcess };

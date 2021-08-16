@@ -1,21 +1,18 @@
-import "any-observable/register/zen";
-import isInteractive from "is-interactive";
 import slugify from "slugify";
-import { CommandModule, InferredOptionTypes, Options } from "yargs";
-import createYargs from "yargs/yargs";
-import { InternalOptionsContext } from "./context";
-import { buildFlatTasks, FlatTasks, runTask, Task } from "./tasks";
+import yargs, { CommandModule, InferredOptionTypes, Options } from "yargs";
+import { hideBin } from "yargs/helpers";
+import { InternalOptionsContext } from "./context.js";
+import { buildFlatTasks, FlatTasks, runTask, Task } from "./tasks.js";
 
 type CommandOptions = Readonly<{ [key: string]: Options }>;
 
-type OptionsContext<
-  O extends CommandOptions | void = void
-> = O extends CommandOptions ? Readonly<InferredOptionTypes<O>> : void;
+export type OptionsContext<O extends CommandOptions | void = void> =
+  O extends CommandOptions ? Readonly<InferredOptionTypes<O>> : void;
 
-type Command<
+export type Command<
   O extends CommandOptions | void = void,
   A = void,
-  B = void
+  B = void,
 > = Readonly<
   O extends CommandOptions
     ? {
@@ -29,7 +26,11 @@ type Command<
 
 // Used to infer the generic parameters.
 // See https://stackoverflow.com/questions/50509952/dynamic-generic-type-inference-for-object-literals-in-typescript.
-const getCommand = <O extends CommandOptions | void = void, A = void, B = void>(
+export const getCommand = <
+  O extends CommandOptions | void = void,
+  A = void,
+  B = void,
+>(
   command: Command<O, A, B>,
 ): Command<O, A, B> => command;
 
@@ -56,7 +57,7 @@ const getInternalOptions = (
   const slugToTitle: { [slug: string]: string } = {};
 
   for (const [title, taskNode] of Object.entries(flatTasks)) {
-    // Slugs are useful on envrionments that don't support quotes in commands.
+    // Slugs are useful on environments that don't support quotes in commands.
     // They are also easier and quicker to type.
     const slug = slugify(title.toLowerCase());
 
@@ -67,9 +68,9 @@ const getInternalOptions = (
     slugToTitle[slug] = title;
 
     if ("tags" in taskNode) {
-      (taskNode.tags ?? []).forEach((tag) => {
+      for (const tag of taskNode.tags ?? []) {
         availableTags.add(tag);
-      });
+      }
     }
   }
 
@@ -84,7 +85,16 @@ const getInternalOptions = (
   return {
     debug: {
       boolean: true,
-      default: !isInteractive(),
+      coerce(value) {
+        if (!value && !process.stdout.isTTY) {
+          throw new Error(
+            "Cannot opt-out of debug mode in non interactive terminals.",
+          );
+        }
+
+        return Boolean(value);
+      },
+      default: !process.stdout.isTTY,
       defaultDescription: "false if terminal is interactive, true otherwise",
       description:
         "Run all tasks sequentially, switch to verbose renderer, and stream the output of shell commands",
@@ -131,11 +141,12 @@ const getInternalOptions = (
   };
 };
 
-const runCli = async (commands: Commands, argv?: string[]) => {
-  let yargs = createYargs(argv ?? process.argv.slice(2));
+export const runCli = async (commands: Commands, argv?: string[]) => {
+  let yargsInstance = yargs(argv ?? hideBin(process.argv));
+
   for (const [commandName, command] of Object.entries(commands)) {
     const flatTasks = buildFlatTasks(command.task);
-    yargs = yargs.command(
+    yargsInstance = yargsInstance.command(
       createYargsCommand(
         commandName,
         command.task,
@@ -151,14 +162,11 @@ const runCli = async (commands: Commands, argv?: string[]) => {
     );
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-expressions
-  yargs
+  await yargsInstance
     .completion("completion", "Print completion script")
     .demandCommand(1)
-    .help()
+    .showHelpOnFail(false)
     .strict()
     .version(false)
-    .wrap(yargs.terminalWidth()).argv;
+    .wrap(yargsInstance.terminalWidth()).argv;
 };
-
-export { Command, getCommand, OptionsContext, runCli };

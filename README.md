@@ -1,8 +1,8 @@
 # Execli
 
-Genenerate task-oriented CLIs declaratively.
+Generate task-oriented CLIs declaratively.
 
-Powered by [listr](https://www.npmjs.com/package/listr) and [yargs](https://www.npmjs.com/package/yargs).
+Powered by [listr2](https://www.npmjs.com/package/listr2) and [yargs](https://www.npmjs.com/package/yargs).
 
 ## Usage
 
@@ -55,12 +55,10 @@ const parentTask: Task<DemoContext> = {
   title: "Parent task",
 };
 
-const demo = getCommand({
+export const demo = getCommand({
   options,
   task: parentTask,
 });
-
-export { demo };
 ```
 
 This file is written in TypeScript to showcase the built-in types.
@@ -107,16 +105,16 @@ Options:
 
 ```
 $ execli run commands.js -- demo --dryRun
-✔ Parent task
-  ↓ Command task ($ pwd) [skipped]
-    → Skipped by --dryRun option
-  ↓ Regular task [skipped]
-    → Skipped by --dryRun option
-  ✔ Nested task
-    ↓ Another command task ($ curl https://example.com) [skipped]
-      → Skipped by --dryRun option
-    ↓ Yet another command task ($ touch file.txt) [skipped]
-      → Skipped by --dryRun option
+✔ Parent task [0.0s]
+  ⚠ Command task ($ pwd)
+    ↓ Skipped by --dryRun option
+  ⚠ Regular task
+    ↓ Skipped by --dryRun option
+  ✔ Nested task [0.0s]
+    ⚠ Another command task ($ curl https://example.com)
+      ↓ Skipped by --dryRun option
+    ⚠ Yet another command task ($ touch file.txt)
+      ↓ Skipped by --dryRun option
 ```
 
 ### Compiling the CLI
@@ -138,23 +136,19 @@ Options:
 ```
 $ execli compile commands.js cli.js
 $ ./cli.js demo --debug  --dryRun
-[13:37:42] Parent task [started]
-[13:37:42] Command task [started]
-[13:37:42] Command task ($ pwd) [title changed]
-[13:37:42] Command task ($ pwd) [skipped]
-[13:37:42] → Skipped by --dryRun option
-[13:37:42] Regular task [started]
-[13:37:42] Regular task [skipped]
-[13:37:42] → Skipped by --dryRun option
-[13:37:42] Nested task [started]
-[13:37:42] Another command task [started]
-[13:37:42] Another command task ($ curl https://example.com) [title changed]
-[13:37:42] Another command task ($ curl https://example.com) [skipped]
-[13:37:42] → Skipped by --dryRun option
-[13:37:42] Yet another command task [started]
-[13:37:42] Yet another command task ($ touch file.txt) [title changed]
-[13:37:42] Yet another command task ($ touch file.txt) [skipped]
-[13:37:42] → Skipped by --dryRun option
-[13:37:42] Nested task [completed]
-[13:37:42] Parent task [completed]
+[STARTED] Parent task
+[STARTED] Command task
+[TITLE] Command task ($ pwd)
+[SKIPPED] Skipped by --dryRun option
+[STARTED] Regular task
+[SKIPPED] Skipped by --dryRun option
+[STARTED] Nested task
+[STARTED] Another command task
+[TITLE] Another command task ($ curl https://example.com)
+[SKIPPED] Skipped by --dryRun option
+[STARTED] Yet another command task
+[TITLE] Yet another command task ($ touch file.txt)
+[SKIPPED] Skipped by --dryRun option
+[SUCCESS] Nested task
+[SUCCESS] Parent task [0.0s]
 ```

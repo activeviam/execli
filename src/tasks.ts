@@ -1,10 +1,11 @@
-import chalk from "chalk";
 import { ExecaChildProcess, Options } from "execa";
-import Listr, { ListrTask, ListrTaskWrapper } from "listr";
+import { Listr, ListrTask, ListrTaskWrapper } from "listr2";
+import { DefaultRenderer } from "listr2/dist/renderer/default.renderer";
+import { VerboseRenderer } from "listr2/dist/renderer/verbose.renderer";
 import {
   stopBackgroundProcess,
   startBackgroundProcess,
-} from "./background-process";
+} from "./background-process.js";
 import {
   Context,
   ContextLike,
@@ -13,22 +14,22 @@ import {
   InternalContext,
   InternalOptionsContext,
   getUserContext,
-  SharedContext,
-} from "./context";
+} from "./context.js";
 import {
   Command,
   createExec,
   Exec,
+  ExecError,
   getCommandString,
   Line,
   OutputLine,
-} from "./exec";
+} from "./exec.js";
 
 type BaseTask = Readonly<{
   title: Line;
 }>;
 
-type SkipResult = boolean | string | void | Promise<boolean>;
+type SkipResult = boolean | string | Promise<boolean | string>;
 
 type SkippableTask<C> = Readonly<{
   skip?: (context: Context<C>) => SkipResult;
@@ -51,16 +52,17 @@ type CommandProperties<C> = Readonly<{
 
 type CommandTask<C> = BaseLeafTask<C> & CommandProperties<C>;
 
-type RegularTask<C> = BaseLeafTask<C> &
-  Readonly<{
-    run: (
-      payload: Readonly<{
-        context: Context<C>;
-        exec: Exec;
-        outputLine: OutputLine;
-      }>,
-    ) => Line | void | Promise<Line | void>;
-  }>;
+type RunnableTask<C> = Readonly<{
+  run: (
+    payload: Readonly<{
+      context: Context<C>;
+      exec: Exec;
+      outputLine: OutputLine;
+    }>,
+  ) => Line | void | Promise<Line | void>;
+}>;
+
+type RegularTask<C> = BaseLeafTask<C> & RunnableTask<C>;
 
 type LeafTask<C> = CommandTask<C> | RegularTask<C>;
 
@@ -71,6 +73,9 @@ type IntersectableContext<C, V = unknown> = C extends ContextLike<V>
 type NestedChildrenMarker = false;
 
 type ParentTask<C, A, B> = BaseTask &
+  Readonly<{
+    rollback?: RunnableTask<IntersectableContext<C>>["run"];
+  }> &
   SkippableTask<IntersectableContext<C>> &
   (A extends ContextLike
     ? Readonly<{
@@ -120,7 +125,9 @@ type ParentTask<C, A, B> = BaseTask &
     concurrent?: boolean | number;
   }>;
 
-type Task<C = void, A = void, B = void> = LeafTask<C> | ParentTask<C, A, B>;
+export type Task<C = void, A = void, B = void> =
+  | LeafTask<C>
+  | ParentTask<C, A, B>;
 
 type FlatTask = Readonly<{
   parentTitle?: string;
@@ -128,9 +135,9 @@ type FlatTask = Readonly<{
   (TaggedTask | Readonly<{ children: readonly string[] }>);
 
 type MutableFlatTasks = { [title: string]: FlatTask };
-type FlatTasks = Readonly<MutableFlatTasks>;
+export type FlatTasks = Readonly<MutableFlatTasks>;
 
-const buildFlatTasks = (
+export const buildFlatTasks = (
   task: Task<any>,
   // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
   flatTasks: MutableFlatTasks = {},
@@ -149,9 +156,9 @@ const buildFlatTasks = (
   };
 
   if (isParentTask(task)) {
-    Object.values(task.children).forEach((childTask) => {
+    for (const childTask of Object.values(task.children)) {
       buildFlatTasks(childTask, flatTasks, task.title);
-    });
+    }
   }
 
   return flatTasks;
@@ -200,30 +207,30 @@ const buildStaticallySkippedTasks = (
     ancestorMatchedOnlyOption || context.only.includes(taskTitle);
   const task = flatTasks[taskTitle];
 
-  if (isRootCall) {
-    if (context.from !== undefined || context.until !== undefined) {
-      const orderedTaskTitles = Object.keys(flatTasks);
+  if (
+    isRootCall &&
+    (context.from !== undefined || context.until !== undefined)
+  ) {
+    const orderedTaskTitles = Object.keys(flatTasks);
 
-      if (context.until !== undefined) {
-        orderedTaskTitles
-          .slice(orderedTaskTitles.indexOf(context.until) + 1)
-          .forEach((title) => {
-            staticallySkippedTasks[title] = "until";
-          });
+    if (context.until !== undefined) {
+      for (const title of orderedTaskTitles.slice(
+        orderedTaskTitles.indexOf(context.until) + 1,
+      )) {
+        staticallySkippedTasks[title] = "until";
       }
+    }
 
-      if (context.from !== undefined) {
-        const ancestorTitles = getAncestorTitles(flatTasks, context.from);
+    if (context.from !== undefined) {
+      const ancestorTitles = getAncestorTitles(flatTasks, context.from);
 
-        orderedTaskTitles
-          .slice(0, orderedTaskTitles.indexOf(context.from))
-          .filter(
-            (title) =>
-              !staticallySkippedTasks[title] && !ancestorTitles.has(title),
-          )
-          .forEach((title) => {
-            staticallySkippedTasks[title] = "from";
-          });
+      for (const title of orderedTaskTitles
+        .slice(0, orderedTaskTitles.indexOf(context.from))
+        .filter(
+          (title) =>
+            !staticallySkippedTasks[title] && !ancestorTitles.has(title),
+        )) {
+        staticallySkippedTasks[title] = "from";
       }
     }
   }
@@ -233,7 +240,7 @@ const buildStaticallySkippedTasks = (
   } else if (context.skip.length > 0 && context.skip.includes(taskTitle)) {
     staticallySkippedTasks[taskTitle] = "skip";
   } else if ("children" in task) {
-    task.children?.forEach((childTaskTitle) => {
+    for (const childTaskTitle of task.children) {
       buildStaticallySkippedTasks(
         context,
         flatTasks,
@@ -242,7 +249,7 @@ const buildStaticallySkippedTasks = (
         matchedOnlyOption,
         false,
       );
-    });
+    }
   } else if (context.only.length > 0 && !matchedOnlyOption) {
     staticallySkippedTasks[taskTitle] = "only";
   } else if (
@@ -268,7 +275,7 @@ const skipByOnlyOption = (
 const skipByTagOption = (skippedTasks: StaticallySkippedTasks, title: string) =>
   skippedTasks[title] === "tag" ? getSkipReason("tag") : false;
 
-const skipByOnlyOrTagOptions = <C>(
+const skipByOnlyOrTagOptions = (
   skippedTasks: StaticallySkippedTasks,
   title: string,
 ) =>
@@ -278,10 +285,18 @@ const shouldSkipByTaskProperty = <C>(
   context: Context<C> & InternalContext,
   task: Readonly<ListrTask<void>> | SkippableTask<C>,
 ): SkipResult => {
+  if (!task.skip) {
+    return false;
+  }
+
   let result;
 
-  if (task.skip) {
-    result = "task" in task ? task.skip() : task.skip(getUserContext(context));
+  if ("task" in task) {
+    // task is a ListrTask.
+    result = typeof task.skip === "function" ? task.skip() : task.skip;
+  } else {
+    // task is as SkippableTask.
+    result = task.skip(getUserContext(context));
   }
 
   if (typeof result === "string") {
@@ -311,7 +326,7 @@ const processCommandProperties = <C>(
   context: Context<C> & InternalContext,
   title: string,
   // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
-  taskWrapper: ListrTaskWrapper<void>,
+  taskWrapper: ListrTaskWrapper<void, any>,
 ): Readonly<{ command: Command; options: Options }> | void => {
   const userContext = getUserContext(context);
 
@@ -326,8 +341,8 @@ const processCommandProperties = <C>(
     const proxiedUserContext = new Proxy(userContext, {
       get(proxied, key) {
         if (key in proxied) {
-          // @ts-expect-error
-          return proxied[key];
+          // @ts-expect-error: The line above ensures that key is in proxied.
+          return proxied[key] as unknown;
         }
 
         return "__contextual";
@@ -375,16 +390,18 @@ const processCommandProperties = <C>(
   return { command, options };
 };
 
-// eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
-const createOutputLine = (taskWrapper: ListrTaskWrapper<void>): OutputLine => (
-  line,
-) => {
-  if (/\r?\n/.test(line)) {
-    throw new Error(`Output line cannot contain line break:\n\n: ${line}`);
-  }
+const createOutputLine =
+  (
+    // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
+    taskWrapper: ListrTaskWrapper<void, any>,
+  ): OutputLine =>
+  (line) => {
+    if (/\r?\n/.test(line)) {
+      throw new Error(`Output line cannot contain line break:\n\n: ${line}`);
+    }
 
-  taskWrapper.output = line;
-};
+    taskWrapper.output = line;
+  };
 
 const createSkippableTask = <C>(
   context: Context<C> & InternalContext,
@@ -393,7 +410,8 @@ const createSkippableTask = <C>(
 ): ListrTask<void> => ({
   ...task,
   skip() {
-    const option = skippedTasks[task.title];
+    const option = skippedTasks[task.title!];
+
     if (option === "from" || option === "skip" || option === "until") {
       return getSkipReason(option);
     }
@@ -411,6 +429,25 @@ const isRegularTask = <C>(task: Task<C>): task is RegularTask<C> =>
 const isParentTask = <C, A, B>(
   task: Task<C, A, B>,
 ): task is ParentTask<C, A, B> => "children" in task;
+
+const runRegularTask = async <C>(
+  contextHolder: ContextHolder<C>,
+  run: RunnableTask<C>["run"],
+  // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
+  taskWrapper: ListrTaskWrapper<void, any>,
+) => {
+  const context = contextHolder.get();
+  const outputLine = createOutputLine(taskWrapper);
+  const exec = createExec(context, outputLine);
+  const result = await run({
+    context: getUserContext(context),
+    exec,
+    outputLine,
+  });
+  if (result) {
+    outputLine(result);
+  }
+};
 
 const createCommandTask = <C>(
   contextHolder: ContextHolder<C>,
@@ -445,6 +482,7 @@ const createRegularTask = <C>(
   createSkippableTask(contextHolder.get(), skippedTasks, {
     skip() {
       const context = contextHolder.get();
+
       if (context.dryRun) {
         return getSkipReason("dryRun");
       }
@@ -456,17 +494,7 @@ const createRegularTask = <C>(
     },
     // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
     async task(_, taskWrapper) {
-      const context = contextHolder.get();
-      const outputLine = createOutputLine(taskWrapper);
-      const exec = createExec(context, outputLine);
-      const result = await task.run({
-        context: getUserContext(context),
-        exec,
-        outputLine,
-      });
-      if (result) {
-        outputLine(result);
-      }
+      await runRegularTask(contextHolder, task.run, taskWrapper);
     },
     title: task.title,
   });
@@ -476,6 +504,7 @@ const getStaticParentTaskSkipReason = <A, B, C>(
   task: ParentTask<C, A, B>,
 ): false | string => {
   const selfSkipReason = skippedTasks[task.title];
+
   if (selfSkipReason) {
     return getSkipReason(selfSkipReason);
   }
@@ -499,6 +528,20 @@ const createParentTask = <C, A, B>(
   task: ParentTask<C, A, B>,
 ): ListrTask<void> =>
   createSkippableTask(contextHolder.get(), skippedTasks, {
+    rollback: task.rollback
+      ? async (
+          _,
+          // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
+          taskWrapper,
+        ) => {
+          await runRegularTask(
+            contextHolder,
+            // @ts-expect-error: The check above ensures that rollback is defined.
+            task.rollback!,
+            taskWrapper,
+          );
+        }
+      : undefined,
     skip() {
       const staticSkipReason = getStaticParentTaskSkipReason(
         skippedTasks,
@@ -509,13 +552,15 @@ const createParentTask = <C, A, B>(
         return staticSkipReason;
       }
 
-      if (task.skip) {
-        const context = contextHolder.get();
-        const userContext = getUserContext(context) as Context<
-          IntersectableContext<C>
-        >;
-        return task.skip(userContext);
+      if (!task.skip) {
+        return false;
       }
+
+      const context = contextHolder.get();
+      const userContext = getUserContext(context) as Context<
+        IntersectableContext<C>
+      >;
+      return task.skip(userContext);
     },
     task() {
       const ownContextHolder: ContextHolder<C> = contextHolder.copy();
@@ -526,6 +571,7 @@ const createParentTask = <C, A, B>(
           createListrTask(
             ownContextHolder,
             skippedTasks,
+            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
             // @ts-expect-error
             childTask,
           ),
@@ -538,12 +584,16 @@ const createParentTask = <C, A, B>(
       if ("background" in task) {
         const childrenTaskWithBackgroundProcess = childrenTask;
         const {
-          command: commandOrCommandGetter,
-          kill,
-          match,
-          options: optionsOrOptionsGetter,
-        } = (task as ParentTask<C, A, B & ContextLike<string>>).background;
-        const backgroundProcessStartingTaskTitle = `${task.title} [starting background process]`;
+          background: {
+            command: commandOrCommandGetter,
+            kill,
+            match,
+            options: optionsOrOptionsGetter,
+          },
+          title,
+        } = task as ParentTask<C, A, B & ContextLike<string>>;
+
+        const backgroundProcessStartingTaskTitle = `${title} [starting background process]`;
 
         let backgroundProcess: ExecaChildProcess;
 
@@ -562,7 +612,7 @@ const createParentTask = <C, A, B>(
                   options: optionsOrOptionsGetter,
                 },
                 context,
-                task.title,
+                title,
                 taskWrapper,
               );
 
@@ -588,41 +638,41 @@ const createParentTask = <C, A, B>(
             title: backgroundProcessStartingTaskTitle,
           },
           {
-            task: () =>
-              new Listr(
-                [
-                  {
-                    task: () => childrenTaskWithBackgroundProcess,
-                    title: `${task.title} [with background process main]`,
-                  },
-                  {
-                    // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
-                    task(_, taskWrapper) {
-                      if (dryRun) {
-                        taskWrapper.skip(getSkipReason("dryRun"));
-                        return;
-                      }
+            rollback() {
+              // @ts-expect-error: No await on purpose.
+              // eslint-disable-next-line @typescript-eslint/no-misused-promises
+              if (backgroundProcess) {
+                stopBackgroundProcess({ backgroundProcess, kill });
+              }
+            },
+            task: () => childrenTaskWithBackgroundProcess,
+            title: `${title} [with background process]`,
+          },
+          {
+            task(
+              _,
+              // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
+              taskWrapper,
+            ) {
+              if (dryRun) {
+                taskWrapper.skip(getSkipReason("dryRun"));
+                return;
+              }
 
-                      // eslint-disable-next-line @typescript-eslint/no-misused-promises
-                      if (backgroundProcess) {
-                        stopBackgroundProcess({ backgroundProcess, kill });
-                      }
-                    },
-                    title: `${task.title} [stopping background process]`,
-                  },
-                ],
-                {
-                  // To cleanly stop the background process even when the main task failed.
-                  exitOnError: false,
-                },
-              ),
-            title: `${task.title} [with background process group]`,
+              // @ts-expect-error: No await on purpose.
+              // eslint-disable-next-line @typescript-eslint/no-misused-promises
+              if (backgroundProcess) {
+                stopBackgroundProcess({ backgroundProcess, kill });
+              }
+            },
+            title: `${title} [stopping background process]`,
           },
         ]);
       }
 
       if ("addContext" in task) {
         const childrenTaskWithAdddedContext = childrenTask;
+        const { addContext, title } = task as ParentTask<C, A & ContextLike, B>;
         childrenTask = new Listr([
           {
             // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
@@ -630,11 +680,7 @@ const createParentTask = <C, A, B>(
               const context = ownContextHolder.get();
               const outputLine = createOutputLine(taskWrapper);
               const exec = createExec(context, outputLine);
-              const addedContext = await (task as ParentTask<
-                C,
-                A & ContextLike,
-                B
-              >).addContext({
+              const addedContext = await addContext({
                 addSecret(secret) {
                   ownContextHolder.addSecret(secret);
                 },
@@ -645,11 +691,11 @@ const createParentTask = <C, A, B>(
               });
               ownContextHolder.add(addedContext);
             },
-            title: `${task.title} [adding context]`,
+            title: `${title} [adding context]`,
           },
           {
             task: () => childrenTaskWithAdddedContext,
-            title: `${task.title} [with added context]`,
+            title: `${title} [with added context]`,
           },
         ]);
       }
@@ -678,42 +724,29 @@ function createListrTask<C>(
   return createParentTask(contextHolder, skippedTasks, task);
 }
 
-const handleError = (context: SharedContext, error: any) => {
-  const log = context.debug
-    ? () => {
-        // NOP
-      }
-    : (message: string) => {
-        // eslint-disable-next-line no-console
-        console.error(message);
-      };
+const showTimer = process.env.NODE_ENV !== "test";
 
-  if (error.command) {
-    log("");
-    Reflect.deleteProperty(error, "all");
-    log("Failed command:");
-    log(chalk.green(error.command));
-    Reflect.deleteProperty(error, "command");
-    log("STDOUT:");
-    log(chalk.gray(error.stdout));
-    Reflect.deleteProperty(error, "stdout");
-    log("STDERR:");
-    log(chalk.red(error.stderr));
-    Reflect.deleteProperty(error, "stderr");
-    log("");
-  }
+const defaultRendererOptions: DefaultRenderer["options"] = {
+  collapse: false,
+  collapseErrors: false,
+  collapseSkips: false,
+  showTimer,
 };
 
-const runTask = async <C>(
+const verboseRendererOptions: VerboseRenderer["options"] = {
+  showTimer,
+};
+
+export const runTask = async <C>(
   task: Task<C>,
   context: Context<C> & InternalOptionsContext,
   flatTasks: FlatTasks,
 ): Promise<void> => {
+  const internalContext: Context<C> & InternalContext = {
+    ...context,
+    secrets: [],
+  };
   try {
-    const internalContext: Context<C> & InternalContext = {
-      ...context,
-      secrets: [],
-    };
     await new Listr(
       [
         createListrTask(
@@ -725,17 +758,21 @@ const runTask = async <C>(
       context.debug
         ? {
             renderer: "verbose",
+            rendererOptions: verboseRendererOptions,
           }
         : {
-            // @ts-expect-error
-            collapse: false,
-            renderer: "update",
+            renderer: "default",
+            rendererOptions: defaultRendererOptions,
           },
     ).run();
-  } catch (error) {
-    handleError(context, error);
+  } catch (error: unknown) {
+    if (error instanceof ExecError) {
+      throw error.toDetailedError({
+        // In --debug mode, stdout and stderr were already streamed to the terminal.
+        withOutputs: !context.debug,
+      });
+    }
+
     throw error;
   }
 };
-
-export { buildFlatTasks, FlatTasks, runTask, Task };

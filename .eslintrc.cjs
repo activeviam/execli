@@ -10,7 +10,6 @@ module.exports = {
     "xo",
     "xo-typescript",
     "prettier",
-    "prettier/@typescript-eslint",
   ],
   overrides: [
     {
@@ -39,6 +38,11 @@ module.exports = {
   rules: {
     // @actions/github uses a lot of snake_case keys.
     "@typescript-eslint/camelcase": "off",
+    // Index signatures are slightly more legible since the key must be named.
+    "@typescript-eslint/consistent-indexed-object-style": [
+      "error",
+      "index-signature",
+    ],
     // TypeScript is good at type inference and already requires types where they matter: exported symbols.
     "@typescript-eslint/explicit-function-return-type": "off",
     // We use sort-keys instead.
@@ -52,12 +56,12 @@ module.exports = {
     // It's useful to use template string to cast expressions to strings.
     "@typescript-eslint/restrict-template-expressions": "off",
     "arrow-body-style": "error",
+    "capitalized-comments": "off",
     // Forbid function declarations
     "func-style": ["error", "expression", { allowArrowFunctions: true }],
-    "import/exports-last": "error",
-    "import/extensions": ["error", "never"],
+    "import/exports-last": "off",
     "import/first": "error",
-    "import/group-exports": "error",
+    "import/group-exports": "off",
     "import/no-cycle": "error",
     // Named export are better for static analysis.
     // See https://humanwhocodes.com/blog/2019/01/stop-using-default-exports-javascript-module/
@@ -98,5 +102,17 @@ module.exports = {
     ],
     "typescript-sort-keys/interface": "error",
     "typescript-sort-keys/string-enum": "error",
+    // Works well in Node.js >= 16 (https://nodejs.org/api/esm.html#esm_node_imports).
+    "unicorn/prefer-node-protocol": "off",
+    "unicorn/prevent-abbreviations": [
+      "error",
+      {
+        replacements: {
+          lib: {
+            library: false,
+          },
+        },
+      },
+    ],
   },
 };

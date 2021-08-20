@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+import path from "node:path";
 import yargs from "yargs";
 import { hideBin } from "yargs/helpers";
 import { runCli, Command } from "./commands.js";
@@ -40,12 +41,15 @@ export const createCli = () =>
       },
       async ({
         _: [_, ...commandArgv],
-        path,
+        path: commandsPath,
       }: Readonly<{
         _: readonly string[];
         path: string;
       }>) => {
-        const commands = (await import(path)) as Readonly<{
+        const commandsAbsolutePath = path.isAbsolute(commandsPath)
+          ? commandsPath
+          : path.join(process.cwd(), commandsPath);
+        const commands = (await import(commandsAbsolutePath)) as Readonly<{
           [key: string]: Command<any>;
         }>;
         await runCli(commands, commandArgv);

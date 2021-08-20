@@ -19,12 +19,15 @@ module.exports = {
           "error",
           { devDependencies: true },
         ],
+        // Enable when https://github.com/facebook/jest/pull/11331 is merged.
+        "unicorn/prefer-node-protocol": "off",
       },
     },
   ],
   parser: "@typescript-eslint/parser",
   parserOptions: {
     ecmaVersion: 2018,
+    extraFileExtensions: [".cjs"],
     project: ["tsconfig.js.json", "tsconfig.json", "tsconfig.test.json"],
     sourceType: "module",
   },
@@ -36,8 +39,6 @@ module.exports = {
   ],
   root: true,
   rules: {
-    // @actions/github uses a lot of snake_case keys.
-    "@typescript-eslint/camelcase": "off",
     // Index signatures are slightly more legible since the key must be named.
     "@typescript-eslint/consistent-indexed-object-style": [
       "error",
@@ -84,7 +85,8 @@ module.exports = {
     // It's fine to use await in for loops instead of Promise.all to execute promises sequentially.
     "no-await-in-loop": "off",
     "no-console": "error",
-    // TypeScript already takes care of that. See https://github.com/bradzacher/eslint-plugin-typescript/issues/110.
+    // TypeScript already takes care of that.
+    // See https://github.com/bradzacher/eslint-plugin-typescript/issues/110.
     "no-undef": "off",
     "object-shorthand": [
       "error",
@@ -102,8 +104,6 @@ module.exports = {
     ],
     "typescript-sort-keys/interface": "error",
     "typescript-sort-keys/string-enum": "error",
-    // Works well in Node.js >= 16 (https://nodejs.org/api/esm.html#esm_node_imports).
-    "unicorn/prefer-node-protocol": "off",
     "unicorn/prevent-abbreviations": [
       "error",
       {

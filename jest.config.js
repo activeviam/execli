@@ -1,4 +1,5 @@
-module.exports = {
+// eslint-disable-next-line import/no-default-export
+export default {
   testEnvironment: "node",
   transform: {
     "^.+\\.ts$": [
@@ -11,5 +12,4 @@ module.exports = {
       },
     ],
   },
-  testPathIgnorePatterns: ["/node_modules/", "commands.js"],
 };

@@ -1,5 +1,5 @@
-import { mkdtemp, rm, writeFile } from "fs/promises";
-import path from "path";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import path from "node:path";
 // @ts-expect-error: No type declarations available.
 import ncc from "@vercel/ncc";
 
@@ -10,7 +10,6 @@ const packageLibDirectory = path.resolve(
 
 const getSource = (filePath: string) => `#!/usr/bin/env node
 
-import "loud-rejection/register.js";
 import {runCli} from "../commands.js";
 
 import * as commands from "${filePath}";

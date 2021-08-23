@@ -1,4 +1,5 @@
 import slugify from "slugify";
+import isInteractive from "is-interactive";
 import yargs, { CommandModule, InferredOptionTypes, Options } from "yargs";
 import { hideBin } from "yargs/helpers";
 import { InternalOptionsContext } from "./context.js";
@@ -82,11 +83,13 @@ const getInternalOptions = (
   const coerceSlugToTitleArray = (elements: readonly string[]): string[] =>
     elements.map((element) => coerceSlugToTitle(element));
 
+  const interactive = isInteractive();
+
   return {
     debug: {
       boolean: true,
       coerce(value) {
-        if (!value && !process.stdout.isTTY) {
+        if (!value && !interactive) {
           throw new Error(
             "Cannot opt-out of debug mode in non interactive terminals.",
           );
@@ -94,7 +97,7 @@ const getInternalOptions = (
 
         return Boolean(value);
       },
-      default: !process.stdout.isTTY,
+      default: !interactive,
       defaultDescription: "false if terminal is interactive, true otherwise",
       description:
         "Run all tasks sequentially, switch to verbose renderer, and stream the output of shell commands",

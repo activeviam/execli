@@ -17,11 +17,7 @@ test("compile", async () => {
   // are correctly bundled and are not required through the package's node_modules.
   const targetPath = tempy.file({ extension: "mjs" });
   await execa("node", [binPath, "compile", commandsFilePath, targetPath]);
-  const { stdout } = await execa("node", [
-    targetPath,
-    "simpleCommand",
-    "--debug",
-  ]);
+  const { stdout } = await execa(targetPath, ["simpleCommand", "--debug"]);
   expect(stdout).toContain("Print current directory");
   expect(stdout).toContain(process.cwd());
 }, 10_000);

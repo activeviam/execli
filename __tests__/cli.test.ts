@@ -1,29 +1,44 @@
+import os from "os";
 import path from "path";
 import execa from "execa";
 import pkgDir from "pkg-dir";
 import tempy from "tempy";
 import { bin } from "../package.json";
 
-const binPath = path.join(pkgDir.sync() as string, bin);
-const commandFilePath = path.join(__dirname, "command.json");
+const binPath = path.join(pkgDir.sync()!, bin);
+const commandsFilePath = path.join(
+  path.dirname(binPath),
+  "__test_resources__",
+  "commands.js",
+);
 
 test("compile", async () => {
   // Use a temporary file path outside the package to make sure all the dependencies
   // are correctly bundled and are not required through the package's node_modules.
-  const targetPath = tempy.file({ extension: "js" });
-  await execa("node", [binPath, "compile", commandFilePath, targetPath]);
+  const targetPath = tempy.file({ extension: "mjs" });
+  await execa("node", [binPath, "compile", commandsFilePath, targetPath]);
   const { stdout } = await execa("node", [
     targetPath,
-    "test-command",
+    "simpleCommand",
     "--debug",
   ]);
   expect(stdout).toContain("Print current directory");
   expect(stdout).toContain(process.cwd());
-}, 10000);
+}, 10_000);
 
 describe("run", () => {
-  const runArguments = [binPath, "run", commandFilePath];
-  const runTestCommandArguments = [...runArguments, "--", "test-command"];
+  const runArguments = [binPath, "run", commandsFilePath];
+  const [
+    runSimpleCommandArguments,
+    runBackgroundCommandArguments,
+    runErrorCommandArguments,
+    runRollbackCommandArguments,
+  ] = [
+    "simpleCommand",
+    "backgroundCommand",
+    "errorCommand",
+    "rollbackCommand",
+  ].map((commandName) => [...runArguments, "--", commandName]);
 
   test.each([
     [
@@ -36,14 +51,14 @@ describe("run", () => {
     ],
     [
       "strict (existing-option)",
-      [...runTestCommandArguments, "--flag"],
+      [...runSimpleCommandArguments, "--flag"],
       {
-        outputs: ["Print current directory"],
+        outputs: ["[SUCCESS] Print current directory"],
       },
     ],
     [
       "strict (unexisting-option)",
-      [...runTestCommandArguments, "--unexisting-option"],
+      [...runSimpleCommandArguments, "--unexisting-option"],
       {
         failed: true,
         outputs: ["Unknown arguments: unexisting-option"],
@@ -51,47 +66,91 @@ describe("run", () => {
     ],
     [
       "debug",
-      [...runTestCommandArguments, "--debug"],
+      [...runSimpleCommandArguments, "--debug"],
       {
-        outputs: ["Print current directory", process.cwd()],
+        outputs: ["[SUCCESS] Print current directory", process.cwd()],
+      },
+    ],
+    [
+      "debug forced in non interactive terminals",
+      [...runSimpleCommandArguments, "--no-debug"],
+      {
+        failed: true,
+        outputs: ["Cannot opt-out of debug mode in non interactive terminals."],
+      },
+    ],
+    [
+      "dryRun",
+      [...runSimpleCommandArguments, "--dryRun"],
+      {
+        outputs: [
+          [
+            "[STARTED] Parent task",
+            "[STARTED] Print current directory",
+            "[TITLE] Print current directory ($ pwd)",
+            "[SKIPPED] Skipped by --dryRun option",
+            "[STARTED] List content of directory",
+            "[TITLE] List content of directory ($ ls)",
+            "[SKIPPED] Skipped by --dryRun option",
+            "[STARTED] List current processes",
+            "[TITLE] List current processes ($ ps)",
+            "[SKIPPED] Skipped by --dryRun option",
+            "[SUCCESS] Parent task",
+          ],
+        ],
       },
     ],
     [
       "from",
-      [...runTestCommandArguments, "--from", "List content of directory"],
+      [...runSimpleCommandArguments, "--from", "List content of directory"],
       {
         outputs: [
-          "Print current directory [skipped]",
-          "List content of directory [completed]",
-          "List current processes [completed]",
+          [
+            "[STARTED] Print current directory",
+            "[SKIPPED] Skipped by --from option",
+          ],
+          "[SUCCESS] List content of directory",
+          "[SUCCESS] List current processes",
         ],
       },
     ],
     [
       "only (exact)",
-      [...runTestCommandArguments, "--only", "Print current directory"],
+      [...runSimpleCommandArguments, "--only", "Print current directory"],
       {
         outputs: [
-          "Print current directory [completed]",
-          "List content of directory [skipped]",
-          "List current processes [skipped]",
+          "[SUCCESS] Print current directory",
+          [
+            "[STARTED] List content of directory",
+            "[SKIPPED] Skipped by --only option",
+          ],
+          [
+            "[STARTED] List current processes",
+            "[SKIPPED] Skipped by --only option",
+          ],
         ],
       },
     ],
     [
       "only (slug)",
-      [...runTestCommandArguments, "--only", "print-current-directory"],
+      [...runSimpleCommandArguments, "--only", "print-current-directory"],
       {
         outputs: [
-          "Print current directory [completed]",
-          "List content of directory [skipped]",
-          "List current processes [skipped]",
+          "[SUCCESS] Print current directory",
+          [
+            "[STARTED] List content of directory",
+            "[SKIPPED] Skipped by --only option",
+          ],
+          [
+            "[STARTED] List current processes",
+            "[SKIPPED] Skipped by --only option",
+          ],
         ],
       },
     ],
     [
       "only (no-match)",
-      [...runTestCommandArguments, "--only", "PrInt-CuRRenT-DirEctoRy"],
+      [...runSimpleCommandArguments, "--only", "PrInt-CuRRenT-DirEctoRy"],
       {
         failed: true,
         outputs: ["Invalid values"],
@@ -99,29 +158,35 @@ describe("run", () => {
     ],
     [
       "skip (exact)",
-      [...runTestCommandArguments, "--skip", "Print current directory"],
+      [...runSimpleCommandArguments, "--skip", "Print current directory"],
       {
         outputs: [
-          "Print current directory [skipped]",
-          "List content of directory [completed]",
-          "List current processes [completed]",
+          [
+            "[STARTED] Print current directory",
+            "[SKIPPED] Skipped by --skip option",
+          ],
+          "[SUCCESS] List content of directory",
+          "[SUCCESS] List current processes",
         ],
       },
     ],
     [
       "skip (slug)",
-      [...runTestCommandArguments, "--skip", "print-current-directory"],
+      [...runSimpleCommandArguments, "--skip", "print-current-directory"],
       {
         outputs: [
-          "Print current directory [skipped]",
-          "List content of directory [completed]",
-          "List current processes [completed]",
+          [
+            "[STARTED] Print current directory",
+            "[SKIPPED] Skipped by --skip option",
+          ],
+          "[SUCCESS] List content of directory",
+          "[SUCCESS] List current processes",
         ],
       },
     ],
     [
       "skip (no-match)",
-      [...runTestCommandArguments, "--skip", "PrInt-CuRRenT-DirEctoRy"],
+      [...runSimpleCommandArguments, "--skip", "PrInt-CuRRenT-DirEctoRy"],
       {
         failed: true,
         outputs: ["Invalid values"],
@@ -129,18 +194,24 @@ describe("run", () => {
     ],
     [
       "tag (existing)",
-      [...runTestCommandArguments, "--tag", "a"],
+      [...runSimpleCommandArguments, "--tag", "a"],
       {
         outputs: [
-          "Print current directory [completed]",
-          "List content of directory [skipped]",
-          "List current processes [skipped]",
+          "[SUCCESS] Print current directory",
+          [
+            "[STARTED] List content of directory",
+            "[SKIPPED] Skipped by --tag option",
+          ],
+          [
+            "[STARTED] List current processes",
+            "[SKIPPED] Skipped by --tag option",
+          ],
         ],
       },
     ],
     [
       "tag (unexisting)",
-      [...runTestCommandArguments, "--tag", "d"],
+      [...runSimpleCommandArguments, "--tag", "d"],
       {
         failed: true,
         outputs: ["Invalid values"],
@@ -148,12 +219,108 @@ describe("run", () => {
     ],
     [
       "until",
-      [...runTestCommandArguments, "--until", "List content of directory"],
+      [...runSimpleCommandArguments, "--until", "List content of directory"],
       {
         outputs: [
-          "Print current directory [completed]",
-          "List content of directory [completed]",
-          "List current processes [skipped]",
+          "[SUCCESS] Print current directory",
+          "[SUCCESS] List content of directory",
+          [
+            "[STARTED] List current processes",
+            "[SKIPPED] Skipped by --until option",
+          ],
+        ],
+      },
+    ],
+    [
+      "background command",
+      runBackgroundCommandArguments,
+      {
+        outputs: [
+          [
+            "[STARTED] Parent task",
+            "[STARTED] Parent task [starting background process]",
+            `[DATA] node --eval "setTimeout(() => {console.log('f' + 'o' + 'o'); setTimeout(() => {}, 10000)}, 500)"`,
+            "[SUCCESS] Parent task [starting background process]",
+            "[STARTED] Parent task [with background process]",
+            "[STARTED] Print matched output",
+            "[DATA] echo foo",
+            "foo",
+            "[SUCCESS] Print matched output",
+            "[SUCCESS] Parent task [with background process]",
+            "[STARTED] Parent task [stopping background process]",
+            "[SUCCESS] Parent task [stopping background process]",
+            "[SUCCESS] Parent task",
+          ],
+        ],
+      },
+    ],
+    [
+      "failed regular task",
+      runErrorCommandArguments,
+      {
+        failed: true,
+        outputs: [
+          [
+            "[STARTED] Nest task",
+            "[STARTED] Throw exception",
+            "[FAILED] Something went wrong.",
+            "[FAILED] Something went wrong.",
+            "[FAILED] Something went wrong.",
+          ],
+        ],
+      },
+    ],
+    [
+      "failed command task",
+      [...runErrorCommandArguments, "--from", "Run broken copy command"],
+      {
+        failed: true,
+        outputs: [
+          [
+            "[STARTED] Run broken copy command",
+            "[DATA] cp unexisting-source target",
+          ],
+          "No such file or directory",
+          [
+            "[FAILED] Command failed",
+            "[FAILED] Command failed",
+            "Error: Command failed with exit code 1: cp unexisting-source target",
+          ],
+        ],
+      },
+    ],
+    [
+      "command task not matching regexp",
+      [
+        ...runErrorCommandArguments,
+        "--from",
+        "Run unmatched background command",
+      ],
+      {
+        failed: true,
+        outputs: [
+          [
+            "[STARTED] Run unmatched background command",
+            "[STARTED] Run unmatched background command [starting background process]",
+            "[DATA] ls",
+            "[FAILED] Command failed",
+            "[FAILED] Command failed",
+            "[FAILED] Command failed",
+            "Error: Background process exited before matching the regexp. Command was: ls",
+          ],
+        ],
+      },
+    ],
+    [
+      "rollback",
+      runRollbackCommandArguments,
+      {
+        failed: true,
+        outputs: [
+          "No such file or directory",
+          ["[FAILED] Command failed", "[FAILED] Command failed"],
+          ["[DATA] echo rollback", "rollback"],
+          "[ROLLBACK] Parent task",
         ],
       },
     ],
@@ -165,15 +332,20 @@ describe("run", () => {
       {
         failed = false,
         outputs,
-      }: { readonly failed?: boolean; readonly outputs: readonly string[] },
+      }: {
+        readonly failed?: boolean;
+        readonly outputs: ReadonlyArray<string | readonly string[]>;
+      },
     ) => {
       const result = await execa("node", commandArguments, {
         reject: !failed,
       });
       expect(result.failed).toBe(failed);
-      outputs.forEach((output) => {
-        expect(failed ? result.stderr : result.stdout).toContain(output);
-      });
+      for (const output of outputs) {
+        expect(`${result.stdout}${os.EOL}${result.stderr}`).toContain(
+          typeof output === "string" ? output : output.join("\n"),
+        );
+      }
     },
   );
 });

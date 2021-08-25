@@ -7,11 +7,17 @@ on:
 jobs:
   test:
     name: Test
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v2
+        with:
+          cache: yarn
+          node-version: 16
       - name: Install
         run: yarn install --frozen-lockfile
+      - name: Deduplicate dependencies
+        run: yarn run yarn-deduplicate --fail
       - name: Build
         run: yarn run build
       - name: ESLint

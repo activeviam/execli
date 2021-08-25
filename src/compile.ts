@@ -1,39 +1,43 @@
-import path from "path";
-// @ts-expect-error
-import ncc from "@zeit/ncc";
-import fs from "fs-extra";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import path from "node:path";
+// @ts-expect-error: No type declarations available.
+import ncc from "@vercel/ncc";
+
+const packageLibDirectory = path.resolve(
+  import.meta.url.replace("file:", ""),
+  "..",
+);
 
 const getSource = (filePath: string) => `#!/usr/bin/env node
 
-require("loud-rejection/register");
+import {runCli} from "../commands.js";
 
-const { runCli } = require("../commands");
-const commands = require("${filePath}");
+import * as commands from "${filePath}";
 
 runCli(commands);`;
 
-const compile = async ({
+export const compile = async ({
   source,
   target,
 }: Readonly<{
   source: string;
   target: string;
 }>) => {
-  const sourcePath = path.resolve(source);
-  // Check that the source can be resolved.
-  require.resolve(sourcePath);
   // The temporary directory needs to be inside the package for imports to resolve correctly.
-  const temporaryDirectory = await fs.mkdtemp(
-    path.join(__dirname, "compiling-"),
+  const temporaryDirectory = await mkdtemp(
+    path.join(packageLibDirectory, "compiling-"),
   );
+  const inputPath = path.join(temporaryDirectory, "input.js");
+  const sourcePath = path.resolve(source);
   try {
-    const inputPath = path.join(temporaryDirectory, "input.js");
-    await fs.writeFile(inputPath, getSource(sourcePath));
-    const { code } = await ncc(inputPath, { minify: true, quiet: true });
-    await fs.writeFile(target, code, { mode: 0o744 });
+    await writeFile(inputPath, getSource(sourcePath));
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+    const { code } = (await ncc(inputPath, {
+      minify: true,
+      quiet: true,
+    })) as Readonly<{ code: string }>;
+    await writeFile(target, code, { mode: 0o744 });
   } finally {
-    await fs.remove(temporaryDirectory);
+    await rm(temporaryDirectory, { recursive: true });
   }
 };
-
-export { compile };

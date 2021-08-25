@@ -10,7 +10,6 @@ module.exports = {
     "xo",
     "xo-typescript",
     "prettier",
-    "prettier/@typescript-eslint",
   ],
   overrides: [
     {
@@ -20,12 +19,15 @@ module.exports = {
           "error",
           { devDependencies: true },
         ],
+        // Enable when https://github.com/facebook/jest/pull/11331 is merged.
+        "unicorn/prefer-node-protocol": "off",
       },
     },
   ],
   parser: "@typescript-eslint/parser",
   parserOptions: {
     ecmaVersion: 2018,
+    extraFileExtensions: [".cjs"],
     project: ["tsconfig.js.json", "tsconfig.json", "tsconfig.test.json"],
     sourceType: "module",
   },
@@ -37,8 +39,11 @@ module.exports = {
   ],
   root: true,
   rules: {
-    // @actions/github uses a lot of snake_case keys.
-    "@typescript-eslint/camelcase": "off",
+    // Index signatures are slightly more legible since the key must be named.
+    "@typescript-eslint/consistent-indexed-object-style": [
+      "error",
+      "index-signature",
+    ],
     // TypeScript is good at type inference and already requires types where they matter: exported symbols.
     "@typescript-eslint/explicit-function-return-type": "off",
     // We use sort-keys instead.
@@ -52,12 +57,12 @@ module.exports = {
     // It's useful to use template string to cast expressions to strings.
     "@typescript-eslint/restrict-template-expressions": "off",
     "arrow-body-style": "error",
+    "capitalized-comments": "off",
     // Forbid function declarations
     "func-style": ["error", "expression", { allowArrowFunctions: true }],
-    "import/exports-last": "error",
-    "import/extensions": ["error", "never"],
+    "import/exports-last": "off",
     "import/first": "error",
-    "import/group-exports": "error",
+    "import/group-exports": "off",
     "import/no-cycle": "error",
     // Named export are better for static analysis.
     // See https://humanwhocodes.com/blog/2019/01/stop-using-default-exports-javascript-module/
@@ -80,7 +85,8 @@ module.exports = {
     // It's fine to use await in for loops instead of Promise.all to execute promises sequentially.
     "no-await-in-loop": "off",
     "no-console": "error",
-    // TypeScript already takes care of that. See https://github.com/bradzacher/eslint-plugin-typescript/issues/110.
+    // TypeScript already takes care of that.
+    // See https://github.com/bradzacher/eslint-plugin-typescript/issues/110.
     "no-undef": "off",
     "object-shorthand": [
       "error",
@@ -98,5 +104,15 @@ module.exports = {
     ],
     "typescript-sort-keys/interface": "error",
     "typescript-sort-keys/string-enum": "error",
+    "unicorn/prevent-abbreviations": [
+      "error",
+      {
+        replacements: {
+          lib: {
+            library: false,
+          },
+        },
+      },
+    ],
   },
 };

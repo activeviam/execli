@@ -1,5 +1,5 @@
-import slugify from "slugify";
 import isInteractive from "is-interactive";
+import slugify from "slugify";
 import yargs, { CommandModule, InferredOptionTypes, Options } from "yargs";
 import { hideBin } from "yargs/helpers";
 import { InternalOptionsContext } from "./context.js";

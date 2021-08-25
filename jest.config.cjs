@@ -1,5 +1,6 @@
-// eslint-disable-next-line import/no-default-export
-export default {
+"use strict";
+
+module.exports = {
   testEnvironment: "node",
   transform: {
     "^.+\\.ts$": [

@@ -2,6 +2,7 @@
 
 module.exports = {
   bracketSpacing: true,
+  endOfLine: "auto",
   semi: true,
   singleQuote: false,
   tabWidth: 2,

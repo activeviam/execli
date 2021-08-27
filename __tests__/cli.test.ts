@@ -1,13 +1,13 @@
-import os from "os";
-import path from "path";
+import { EOL } from "node:os";
+import { dirname, join } from "node:path";
 import execa from "execa";
 import pkgDir from "pkg-dir";
 import tempy from "tempy";
 import { bin } from "../package.json";
 
-const binPath = path.join(pkgDir.sync()!, bin);
-const commandsFilePath = path.join(
-  path.dirname(binPath),
+const binPath = join(pkgDir.sync()!, bin);
+const commandsFilePath = join(
+  dirname(binPath),
   "__test_resources__",
   "commands.js",
 );
@@ -338,7 +338,7 @@ describe("run", () => {
       });
       expect(result.failed).toBe(failed);
       for (const output of outputs) {
-        expect(`${result.stdout}${os.EOL}${result.stderr}`).toContain(
+        expect(`${result.stdout}${EOL}${result.stderr}`).toContain(
           typeof output === "string" ? output : output.join("\n"),
         );
       }

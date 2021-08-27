@@ -5,7 +5,7 @@ import { hideBin } from "yargs/helpers";
 import { InternalOptionsContext } from "./context.js";
 import { buildFlatTasks, FlatTasks, runTask, Task } from "./tasks.js";
 
-type CommandOptions = Readonly<{ [key: string]: Options }>;
+type CommandOptions = Readonly<Record<string, Options>>;
 
 export type OptionsContext<O extends CommandOptions | void = void> =
   O extends CommandOptions ? Readonly<InferredOptionTypes<O>> : void;
@@ -35,7 +35,7 @@ export const getCommand = <
   command: Command<O, A, B>,
 ): Command<O, A, B> => command;
 
-type Commands = Readonly<{ [key: string]: Command<any> }>;
+type Commands = Readonly<Record<string, Command<any>>>;
 
 const createYargsCommand = <C>(
   name: string,
@@ -55,7 +55,7 @@ const getInternalOptions = (
   flatTasks: FlatTasks,
 ): { [TKey in keyof InternalOptionsContext]: Options } => {
   const availableTags = new Set<string>();
-  const slugToTitle: { [slug: string]: string } = {};
+  const slugToTitle: Record<string, string> = {};
 
   for (const [title, taskNode] of Object.entries(flatTasks)) {
     // Slugs are useful on environments that don't support quotes in commands.

@@ -1,9 +1,8 @@
 {
   "compilerOptions": {
     "declaration": true,
-    "lib": ["es2019.object", "es2020.string"],
+    "declarationMap": true,
     "module": "ES2020",
-    "moduleResolution": "node",
     "sourceMap": true,
     "outDir": "lib",
     "rootDir": "src",

@@ -41,7 +41,6 @@ export const startBackgroundProcess = async <C extends ContextLike<string>>({
         { chunks: stdoutChunks, stream: backgroundProcess.stdout },
       ]) {
         if (stream !== null) {
-          // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
           const listener = (chunk: Buffer) => {
             chunks.push(chunk);
             const localMatches = match.exec(String(chunk));
@@ -72,16 +71,13 @@ export const startBackgroundProcess = async <C extends ContextLike<string>>({
   };
 };
 
-// eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
 export const stopBackgroundProcess = ({
   backgroundProcess,
-  // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
   kill = (backgroundProcess) => {
     backgroundProcess.kill("SIGTERM", { forceKillAfterTimeout: 30_000 });
   },
 }: Readonly<{
   backgroundProcess: ExecaChildProcess;
-  // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
   kill?: (backgroundProcess: ExecaChildProcess) => void;
 }>) => {
   kill(backgroundProcess);

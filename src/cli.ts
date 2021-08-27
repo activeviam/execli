@@ -2,6 +2,7 @@
 
 import { isAbsolute, join } from "node:path";
 import { argv, cwd } from "node:process";
+import { pathToFileURL } from "node:url";
 import yargs from "yargs";
 import { hideBin } from "yargs/helpers";
 import { Command, runCli } from "./commands.js";
@@ -48,8 +49,9 @@ export const createCli = () =>
         const commandsAbsolutePath = isAbsolute(commandsPath)
           ? commandsPath
           : join(cwd(), commandsPath);
+        const commandsUrl = pathToFileURL(commandsAbsolutePath);
         // eslint-disable-next-line node/no-unsupported-features/es-syntax
-        const commands = (await import(commandsAbsolutePath)) as Readonly<
+        const commands = (await import(commandsUrl.href)) as Readonly<
           Record<string, Command<any>>
         >;
         await runCli(commands, commandArgv);

@@ -14,7 +14,7 @@ const commandsFilePath = join(
   "index.js",
 );
 
-test.skip("compile", async () => {
+test("compile", async () => {
   // Use a temporary file path outside the package to make sure all the dependencies
   // are correctly bundled and are not required through the package's node_modules.
   const targetPath = tempy.file({ extension: "mjs" });

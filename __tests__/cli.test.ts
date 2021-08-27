@@ -212,7 +212,11 @@ describe("run", () => {
       for (const outputType of ["stderr", "stdout"] as const) {
         if (result[outputType]) {
           outputs[outputType] = result[outputType]
-            .replaceAll(packageRootDirectory, "EXECLI_DIRECTORY")
+            .replace(
+              /(file:\/\/)?[\\\-/:.\w]*([/\\])execli[\\\-/:.\w]*/g,
+              "SOME_EXECLI_PATH",
+            )
+            .replace(/node:[\\/\-:.\w]*/g, "SOME_NODE_PATH")
             .split(/\r?\n/);
         }
       }

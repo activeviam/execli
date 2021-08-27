@@ -5,7 +5,7 @@ Object {
   "stdout": Array [
     "[STARTED] Parent task",
     "[STARTED] Parent task [starting background process]",
-    "[DATA] node --eval \\"setTimeout(() => {console.log('f' + 'o' + 'o'); setTimeout(() => {}, 10000)}, 500)\\"",
+    "[DATA] node --eval \\"setTimeout(() => {console.log('f' + 'o' + 'o'); setTimeout(() => {}, 5000)}, 500)\\"",
     "[SUCCESS] Parent task [starting background process]",
     "[STARTED] Parent task [with background process]",
     "[STARTED] Print matched output",

@@ -12,7 +12,7 @@ const task: Task<void, void, AddedContext> = {
     command: [
       "node",
       "--eval",
-      "setTimeout(() => {console.log('f' + 'o' + 'o'); setTimeout(() => {}, 10000)}, 500)",
+      "setTimeout(() => {console.log('f' + 'o' + 'o'); setTimeout(() => {}, 5000)}, 500)",
     ],
     match: /\b(?<bar>\w+)\b/,
   },

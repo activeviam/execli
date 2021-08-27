@@ -1,5 +1,4 @@
-import { OptionsContext } from "../commands.js";
-import { getCommand, Task } from "../index.js";
+import { getCommand, OptionsContext, Task } from "../../index.js";
 
 const options = {
   flag: {
@@ -13,25 +12,25 @@ type Context = OptionsContext<typeof options>;
 const task: Task<Context> = {
   children: [
     {
-      command: ["pwd"],
+      command: ["echo", "start"],
       tags: ["a"],
-      title: "Print current directory",
+      title: "Echo start",
     },
     {
-      command: ["ls"],
+      command: ["echo", "mystery"],
       tags: ["b"],
-      title: "List content of directory",
+      title: "Echo middle",
     },
     {
-      command: ["ps"],
+      command: ["echo", "end"],
       tags: ["c"],
-      title: "List current processes",
+      title: "Echo end",
     },
   ],
   title: "Parent task",
 };
 
-export const simpleCommand = getCommand({
+export const simple = getCommand({
   options,
   task,
 });

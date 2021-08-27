@@ -1,4 +1,4 @@
-import { getCommand, Task } from "../index.js";
+import { getCommand, Task } from "../../index.js";
 
 const task: Task = {
   children: [
@@ -13,6 +13,6 @@ const task: Task = {
   title: "Parent task",
 };
 
-export const rollbackCommand = getCommand({
+export const rollback = getCommand({
   task,
 });

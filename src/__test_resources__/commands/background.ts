@@ -1,4 +1,4 @@
-import { getCommand, Task } from "../index.js";
+import { getCommand, Task } from "../../index.js";
 
 type AddedContext = Readonly<{ bar: string }>;
 
@@ -20,6 +20,6 @@ const task: Task<void, void, AddedContext> = {
   title: "Parent task",
 };
 
-export const backgroundCommand = getCommand({
+export const background = getCommand({
   task,
 });

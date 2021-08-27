@@ -26,7 +26,7 @@
   ],
   "scripts": {
     "build": "tsc --build tsconfig.json",
-    "prettier": "prettier --ignore-path .gitignore \"./**/*.{cjs,js,json,md,ts,yml}\"",
+    "prettier": "prettier --ignore-path .gitignore \"./**/*.{json,md,yml}\"",
     "pretest": "tsc --build tsconfig.test.json",
     "test": "jest",
     "xo": "xo"

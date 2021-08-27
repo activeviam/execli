@@ -1,4 +1,4 @@
-import { getCommand, Task } from "../index.js";
+import { getCommand, Task } from "../../index.js";
 
 const runBrokenBackgroundCommand: Task<
   void,
@@ -36,7 +36,7 @@ const runUnmatchedBackgroundCommand: Task<
   title: "Run unmatched background command",
 };
 
-export const errorCommand = getCommand({
+export const error = getCommand({
   task: {
     children: [
       {
@@ -61,8 +61,8 @@ export const errorCommand = getCommand({
       runBrokenBackgroundCommand,
       runUnmatchedBackgroundCommand,
       {
-        command: ["ps"],
-        title: "List current processes",
+        command: ["echo", "finally"],
+        title: "Echo finally",
       },
     ],
     title: "Parent task",

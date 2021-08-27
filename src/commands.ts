@@ -1,3 +1,4 @@
+import { argv } from "node:process";
 import isInteractive from "is-interactive";
 import slugify from "slugify";
 import yargs, { CommandModule, InferredOptionTypes, Options } from "yargs";
@@ -144,8 +145,11 @@ const getInternalOptions = (
   };
 };
 
-export const runCli = async (commands: Commands, argv?: string[]) => {
-  let yargsInstance = yargs(argv ? hideBin(argv) : []);
+export const runCli = async (
+  commands: Commands,
+  commandArguments?: string[],
+) => {
+  let yargsInstance = yargs(commandArguments ?? hideBin(argv));
 
   for (const [commandName, command] of Object.entries(commands)) {
     const flatTasks = buildFlatTasks(command.task);

@@ -1,4 +1,3 @@
-import { EOL } from "node:os";
 import { dirname, join } from "node:path";
 import execa from "execa";
 import pkgDir from "pkg-dir";
@@ -214,7 +213,7 @@ describe("run", () => {
         if (result[outputType]) {
           outputs[outputType] = result[outputType]
             .replaceAll(packageRootDirectory, "EXECLI_DIRECTORY")
-            .split(EOL);
+            .split(/\r?\n/);
         }
       }
 

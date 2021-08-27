@@ -1,9 +1,10 @@
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 // @ts-expect-error: No type declarations available.
 import ncc from "@vercel/ncc";
 
-const packageLibDirectory = resolve(import.meta.url.replace("file:", ""), "..");
+const packageLibDirectory = dirname(fileURLToPath(import.meta.url));
 
 const getSource = (filePath: string) => `#!/usr/bin/env node
 

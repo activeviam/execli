@@ -19,12 +19,15 @@ jobs:
       - name: Install
         run: yarn install --frozen-lockfile
       - name: Check dependencies deduplicated
+        if: ${{ matrix.os == "ubuntu-latest" }}
         run: yarn run yarn-deduplicate --fail
       - name: Build
         run: yarn run build
       - name: Format
+        if: ${{ matrix.os == "ubuntu-latest" }}
         run: yarn run prettier --check
       - name: Lint
+        if: ${{ matrix.os == "ubuntu-latest" }}
         run: yarn run xo
       - name: Test
         run: yarn run test

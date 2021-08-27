@@ -1,16 +1,16 @@
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 // @ts-expect-error: No type declarations available.
 import ncc from "@vercel/ncc";
 
 const packageLibDirectory = dirname(fileURLToPath(import.meta.url));
 
-const getSource = (filePath: string) => `#!/usr/bin/env node
+const getSource = (commandsUrl: URL) => `#!/usr/bin/env node
 
 import {runCli} from "../commands.js";
 
-import * as commands from "${filePath}";
+import * as commands from "${commandsUrl.href}";
 
 runCli(commands);`;
 
@@ -26,9 +26,9 @@ export const compile = async ({
     join(packageLibDirectory, "compiling-"),
   );
   const inputPath = join(temporaryDirectory, "input.js");
-  const sourcePath = resolve(source);
+  const sourceUrl = pathToFileURL(resolve(source));
   try {
-    await writeFile(inputPath, getSource(sourcePath));
+    await writeFile(inputPath, getSource(sourceUrl));
     // eslint-disable-next-line @typescript-eslint/no-unsafe-call
     const { code } = (await ncc(inputPath, {
       minify: true,

@@ -20,9 +20,9 @@ jobs:
         run: yarn run yarn-deduplicate --fail
       - name: Build
         run: yarn run build
-      - name: ESLint
-        run: yarn run eslint
       - name: Prettier
-        run: yarn run check-prettier
+        run: yarn run prettier --check
+      - name: XO
+        run: yarn run xo
       - name: Test
         run: yarn run test

@@ -223,5 +223,6 @@ describe("run", () => {
 
       expect(outputs).toMatchSnapshot();
     },
+    15_000,
   );
 });

@@ -1,0 +1,359 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`run background command {"commandName":"background"} 1`] = `
+Object {
+  "stdout": Array [
+    "[STARTED] Parent task",
+    "[STARTED] Parent task [starting background process]",
+    "[DATA] node --eval \\"setTimeout(() => {console.log('f' + 'o' + 'o'); setTimeout(() => {}, 5000)}, 500)\\"",
+    "[SUCCESS] Parent task [starting background process]",
+    "[STARTED] Parent task [with background process]",
+    "[STARTED] Print matched output",
+    "[DATA] echo foo",
+    "foo",
+    "[SUCCESS] Print matched output",
+    "[SUCCESS] Parent task [with background process]",
+    "[STARTED] Parent task [stopping background process]",
+    "[SUCCESS] Parent task [stopping background process]",
+    "[SUCCESS] Parent task",
+  ],
+}
+`;
+
+exports[`run command required {"failing":true} 1`] = `
+Object {
+  "stderr": Array [
+    "Not enough non-option arguments: got 0, need at least 1",
+  ],
+}
+`;
+
+exports[`run command task not matching regexp {"commandName":"error","failing":true,"options":["--from","Run unmatched background command"]} 1`] = `
+Object {
+  "stderr": Array [
+    "[FAILED] Command failed",
+    "[FAILED] Command failed",
+    "[FAILED] Command failed",
+    "Error: Background process exited before matching the regexp. Command was: ls",
+    "    at ExecError.toDetailedError (SOME_EXECLI_PATH)",
+    "    at runTask (SOME_EXECLI_PATH)",
+    "    at processTicksAndRejections (SOME_NODE_PATH)",
+    "    at async Object.handler (SOME_EXECLI_PATH)",
+  ],
+  "stdout": Array [
+    "[STARTED] Parent task",
+    "[STARTED] Print current directory",
+    "[SKIPPED] Skipped by --from option",
+    "[STARTED] Nest task",
+    "[SKIPPED] Skipped by --from option",
+    "[STARTED] Run failing script",
+    "[SKIPPED] Skipped by --from option",
+    "[STARTED] Run broken background command",
+    "[SKIPPED] Skipped by --from option",
+    "[STARTED] Run unmatched background command",
+    "[STARTED] Run unmatched background command [starting background process]",
+    "[DATA] ls",
+  ],
+}
+`;
+
+exports[`run debug {"commandName":"simple","options":["--debug"]} 1`] = `
+Object {
+  "stdout": Array [
+    "[STARTED] Parent task",
+    "[STARTED] Echo start",
+    "[DATA] echo start",
+    "start",
+    "[SUCCESS] Echo start",
+    "[STARTED] Echo middle",
+    "[DATA] echo mystery",
+    "mystery",
+    "[SUCCESS] Echo middle",
+    "[STARTED] Echo end",
+    "[DATA] echo end",
+    "end",
+    "[SUCCESS] Echo end",
+    "[SUCCESS] Parent task",
+  ],
+}
+`;
+
+exports[`run debug forced in non interactive terminals {"commandName":"simple","failing":true,"options":["--no-debug"]} 1`] = `
+Object {
+  "stderr": Array [
+    "Cannot opt-out of debug mode in non interactive terminals.",
+  ],
+}
+`;
+
+exports[`run dryRun {"commandName":"simple","options":["--dryRun"]} 1`] = `
+Object {
+  "stdout": Array [
+    "[STARTED] Parent task",
+    "[STARTED] Echo start",
+    "[TITLE] Echo start ($ echo start)",
+    "[SKIPPED] Skipped by --dryRun option",
+    "[STARTED] Echo middle",
+    "[TITLE] Echo middle ($ echo mystery)",
+    "[SKIPPED] Skipped by --dryRun option",
+    "[STARTED] Echo end",
+    "[TITLE] Echo end ($ echo end)",
+    "[SKIPPED] Skipped by --dryRun option",
+    "[SUCCESS] Parent task",
+  ],
+}
+`;
+
+exports[`run failed command task {"commandName":"error","failing":true,"options":["--from","Run failing script"]} 1`] = `
+Object {
+  "stderr": Array [
+    "[FAILED] Command failed",
+    "[FAILED] Command failed",
+    "Error: Command failed with exit code 1: node --eval console.log('failing'); process.exit(1)",
+    "    at ExecError.toDetailedError (SOME_EXECLI_PATH)",
+    "    at runTask (SOME_EXECLI_PATH)",
+    "    at processTicksAndRejections (SOME_NODE_PATH)",
+    "    at async Object.handler (SOME_EXECLI_PATH)",
+  ],
+  "stdout": Array [
+    "[STARTED] Parent task",
+    "[STARTED] Print current directory",
+    "[SKIPPED] Skipped by --from option",
+    "[STARTED] Nest task",
+    "[SKIPPED] Skipped by --from option",
+    "[STARTED] Run failing script",
+    "[DATA] node --eval \\"console.log('failing'); process.exit(1)\\"",
+    "failing",
+  ],
+}
+`;
+
+exports[`run failed regular task {"commandName":"error","failing":true} 1`] = `
+Object {
+  "stderr": Array [
+    "[FAILED] Something went wrong.",
+    "[FAILED] Something went wrong.",
+    "[FAILED] Something went wrong.",
+    "Error: Something went wrong.",
+    "    at run (SOME_EXECLI_PATH)",
+    "    at runRegularTask (SOME_EXECLI_PATH)",
+    "    at Task.task (SOME_EXECLI_PATH)",
+    "    at Task.run (SOME_EXECLI_PATH)",
+    "    at processTicksAndRejections (SOME_NODE_PATH)",
+  ],
+  "stdout": Array [
+    "[STARTED] Parent task",
+    "[STARTED] Print current directory",
+    "[DATA] pwd",
+    "SOME_EXECLI_PATH",
+    "[SUCCESS] Print current directory",
+    "[STARTED] Nest task",
+    "[STARTED] Throw exception",
+  ],
+}
+`;
+
+exports[`run from {"commandName":"simple","options":["--from","Echo middle"]} 1`] = `
+Object {
+  "stdout": Array [
+    "[STARTED] Parent task",
+    "[STARTED] Echo start",
+    "[SKIPPED] Skipped by --from option",
+    "[STARTED] Echo middle",
+    "[DATA] echo mystery",
+    "mystery",
+    "[SUCCESS] Echo middle",
+    "[STARTED] Echo end",
+    "[DATA] echo end",
+    "end",
+    "[SUCCESS] Echo end",
+    "[SUCCESS] Parent task",
+  ],
+}
+`;
+
+exports[`run only (exact title) {"commandName":"simple","options":["--only","Echo start"]} 1`] = `
+Object {
+  "stdout": Array [
+    "[STARTED] Parent task",
+    "[STARTED] Echo start",
+    "[DATA] echo start",
+    "start",
+    "[SUCCESS] Echo start",
+    "[STARTED] Echo middle",
+    "[SKIPPED] Skipped by --only option",
+    "[STARTED] Echo end",
+    "[SKIPPED] Skipped by --only option",
+    "[SUCCESS] Parent task",
+  ],
+}
+`;
+
+exports[`run only (neither exact title nor slug) {"commandName":"simple","failing":true,"options":["--only","EcHo-StArt"]} 1`] = `
+Object {
+  "stderr": Array [
+    "Invalid values:",
+    "  Argument: only, Given: \\"EcHo-StArt\\", Choices: \\"Echo end\\", \\"Echo middle\\", \\"Echo start\\", \\"Parent task\\"",
+  ],
+}
+`;
+
+exports[`run only (slug) {"commandName":"simple","options":["--only","echo-start"]} 1`] = `
+Object {
+  "stdout": Array [
+    "[STARTED] Parent task",
+    "[STARTED] Echo start",
+    "[DATA] echo start",
+    "start",
+    "[SUCCESS] Echo start",
+    "[STARTED] Echo middle",
+    "[SKIPPED] Skipped by --only option",
+    "[STARTED] Echo end",
+    "[SKIPPED] Skipped by --only option",
+    "[SUCCESS] Parent task",
+  ],
+}
+`;
+
+exports[`run option (existing) {"commandName":"simple","options":["--flag"]} 1`] = `
+Object {
+  "stdout": Array [
+    "[STARTED] Parent task",
+    "[STARTED] Echo start",
+    "[DATA] echo start",
+    "start",
+    "[SUCCESS] Echo start",
+    "[STARTED] Echo middle",
+    "[DATA] echo mystery",
+    "mystery",
+    "[SUCCESS] Echo middle",
+    "[STARTED] Echo end",
+    "[DATA] echo end",
+    "end",
+    "[SUCCESS] Echo end",
+    "[SUCCESS] Parent task",
+  ],
+}
+`;
+
+exports[`run option (unexisting) {"commandName":"simple","failing":true,"options":["--unexisting-option"]} 1`] = `
+Object {
+  "stderr": Array [
+    "Unknown arguments: unexisting-option, unexistingOption",
+  ],
+}
+`;
+
+exports[`run rollback {"commandName":"rollback","failing":true} 1`] = `
+Object {
+  "stderr": Array [
+    "[FAILED] Command failed",
+    "[FAILED] Command failed",
+    "[ROLLBACK] Parent task",
+    "Error: Parent task",
+    "    at Task.run (SOME_EXECLI_PATH)",
+    "    at processTicksAndRejections (SOME_NODE_PATH)",
+    "    at async SOME_EXECLI_PATH",
+  ],
+  "stdout": Array [
+    "[STARTED] Parent task",
+    "[STARTED] Run failing script",
+    "[DATA] node --eval \\"console.log('failing'); process.exit(1)\\"",
+    "failing",
+    "[DATA] echo rollback",
+    "rollback",
+  ],
+}
+`;
+
+exports[`run skip (exact title) {"commandName":"simple","options":["--skip","Echo start"]} 1`] = `
+Object {
+  "stdout": Array [
+    "[STARTED] Parent task",
+    "[STARTED] Echo start",
+    "[SKIPPED] Skipped by --skip option",
+    "[STARTED] Echo middle",
+    "[DATA] echo mystery",
+    "mystery",
+    "[SUCCESS] Echo middle",
+    "[STARTED] Echo end",
+    "[DATA] echo end",
+    "end",
+    "[SUCCESS] Echo end",
+    "[SUCCESS] Parent task",
+  ],
+}
+`;
+
+exports[`run skip (neither exact title nor slug) {"commandName":"simple","failing":true,"options":["--skip","EcHo-StArt"]} 1`] = `
+Object {
+  "stderr": Array [
+    "Invalid values:",
+    "  Argument: skip, Given: \\"EcHo-StArt\\", Choices: \\"Echo end\\", \\"Echo middle\\", \\"Echo start\\", \\"Parent task\\"",
+  ],
+}
+`;
+
+exports[`run skip (slug) {"commandName":"simple","options":["--skip","echo-start"]} 1`] = `
+Object {
+  "stdout": Array [
+    "[STARTED] Parent task",
+    "[STARTED] Echo start",
+    "[SKIPPED] Skipped by --skip option",
+    "[STARTED] Echo middle",
+    "[DATA] echo mystery",
+    "mystery",
+    "[SUCCESS] Echo middle",
+    "[STARTED] Echo end",
+    "[DATA] echo end",
+    "end",
+    "[SUCCESS] Echo end",
+    "[SUCCESS] Parent task",
+  ],
+}
+`;
+
+exports[`run tag (existing) {"commandName":"simple","options":["--tag","a"]} 1`] = `
+Object {
+  "stdout": Array [
+    "[STARTED] Parent task",
+    "[STARTED] Echo start",
+    "[DATA] echo start",
+    "start",
+    "[SUCCESS] Echo start",
+    "[STARTED] Echo middle",
+    "[SKIPPED] Skipped by --tag option",
+    "[STARTED] Echo end",
+    "[SKIPPED] Skipped by --tag option",
+    "[SUCCESS] Parent task",
+  ],
+}
+`;
+
+exports[`run tag (unexisting) {"commandName":"simple","failing":true,"options":["--tag","d"]} 1`] = `
+Object {
+  "stderr": Array [
+    "Invalid values:",
+    "  Argument: tag, Given: \\"d\\", Choices: \\"a\\", \\"b\\", \\"c\\"",
+  ],
+}
+`;
+
+exports[`run until {"commandName":"simple","options":["--until","Echo middle"]} 1`] = `
+Object {
+  "stdout": Array [
+    "[STARTED] Parent task",
+    "[STARTED] Echo start",
+    "[DATA] echo start",
+    "start",
+    "[SUCCESS] Echo start",
+    "[STARTED] Echo middle",
+    "[DATA] echo mystery",
+    "mystery",
+    "[SUCCESS] Echo middle",
+    "[STARTED] Echo end",
+    "[SKIPPED] Skipped by --until option",
+    "[SUCCESS] Parent task",
+  ],
+}
+`;

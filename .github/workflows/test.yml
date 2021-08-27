@@ -1,4 +1,3 @@
-name: Test
 on:
   push:
     branches-ignore:
@@ -6,8 +5,11 @@ on:
 
 jobs:
   test:
-    name: Test
-    runs-on: ubuntu-20.04
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macOS-latest, windows-latest]
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-node@v2
@@ -16,13 +18,16 @@ jobs:
           node-version: 16
       - name: Install
         run: yarn install --frozen-lockfile
-      - name: Deduplicate dependencies
+      - name: Check dependencies deduplicated
+        if: ${{ matrix.os == 'ubuntu-latest' }}
         run: yarn run yarn-deduplicate --fail
       - name: Build
         run: yarn run build
-      - name: ESLint
-        run: yarn run eslint
-      - name: Prettier
-        run: yarn run check-prettier
+      - name: Format
+        if: ${{ matrix.os == 'ubuntu-latest' }}
+        run: yarn run prettier --check
+      - name: Lint
+        if: ${{ matrix.os == 'ubuntu-latest' }}
+        run: yarn run xo
       - name: Test
         run: yarn run test

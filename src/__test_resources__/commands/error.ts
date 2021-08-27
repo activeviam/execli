@@ -1,4 +1,5 @@
-import { getCommand, Task } from "../index.js";
+import { getCommand, Task } from "../../index.js";
+import { failingNodeScriptCommand } from "./utils.js";
 
 const runBrokenBackgroundCommand: Task<
   void,
@@ -6,7 +7,7 @@ const runBrokenBackgroundCommand: Task<
   Readonly<{ nothing: string }>
 > = {
   background: {
-    command: ["cp", "unexisting-source", "target"],
+    command: failingNodeScriptCommand,
     match: /\b(?<nothing>\w+)\b/,
   },
   children: [
@@ -36,7 +37,7 @@ const runUnmatchedBackgroundCommand: Task<
   title: "Run unmatched background command",
 };
 
-export const errorCommand = getCommand({
+export const error = getCommand({
   task: {
     children: [
       {
@@ -55,14 +56,14 @@ export const errorCommand = getCommand({
         title: "Nest task",
       },
       {
-        command: ["cp", "unexisting-source", "target"],
-        title: "Run broken copy command",
+        command: failingNodeScriptCommand,
+        title: "Run failing script",
       },
       runBrokenBackgroundCommand,
       runUnmatchedBackgroundCommand,
       {
-        command: ["ps"],
-        title: "List current processes",
+        command: ["echo", "finally"],
+        title: "Echo finally",
       },
     ],
     title: "Parent task",

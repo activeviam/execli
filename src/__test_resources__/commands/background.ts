@@ -1,4 +1,4 @@
-import { getCommand, Task } from "../index.js";
+import { getCommand, Task } from "../../index.js";
 
 type AddedContext = Readonly<{ bar: string }>;
 
@@ -12,7 +12,7 @@ const task: Task<void, void, AddedContext> = {
     command: [
       "node",
       "--eval",
-      "setTimeout(() => {console.log('f' + 'o' + 'o'); setTimeout(() => {}, 10000)}, 500)",
+      "setTimeout(() => {console.log('f' + 'o' + 'o'); setTimeout(() => {}, 5000)}, 500)",
     ],
     match: /\b(?<bar>\w+)\b/,
   },
@@ -20,6 +20,6 @@ const task: Task<void, void, AddedContext> = {
   title: "Parent task",
 };
 
-export const backgroundCommand = getCommand({
+export const background = getCommand({
   task,
 });

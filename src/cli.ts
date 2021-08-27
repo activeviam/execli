@@ -1,17 +1,18 @@
 #!/usr/bin/env node
 
-import path from "node:path";
+import { isAbsolute, join } from "node:path";
+import { argv, cwd } from "node:process";
+import { pathToFileURL } from "node:url";
 import yargs from "yargs";
 import { hideBin } from "yargs/helpers";
-import { runCli, Command } from "./commands.js";
+import { Command, runCli } from "./commands.js";
 import { compile } from "./compile.js";
 
 export const createCli = () =>
-  yargs(hideBin(process.argv))
+  yargs(hideBin(argv))
     .command(
       "compile <source> <target>",
       "Compile the commands at the given path to a single executable Node.js file, together with all the dependencies",
-      // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
       (yargs) => {
         yargs
           .positional("source", {
@@ -31,7 +32,6 @@ export const createCli = () =>
     .command(
       "run <path>",
       "Run the commands at the given path, forwarding the command line arguments after --",
-      // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
       (yargs) => {
         yargs.positional("path", {
           describe: "The path resolving to the file exporting the commands",
@@ -46,12 +46,14 @@ export const createCli = () =>
         _: readonly string[];
         path: string;
       }>) => {
-        const commandsAbsolutePath = path.isAbsolute(commandsPath)
+        const commandsAbsolutePath = isAbsolute(commandsPath)
           ? commandsPath
-          : path.join(process.cwd(), commandsPath);
-        const commands = (await import(commandsAbsolutePath)) as Readonly<{
-          [key: string]: Command<any>;
-        }>;
+          : join(cwd(), commandsPath);
+        const commandsUrl = pathToFileURL(commandsAbsolutePath);
+        // eslint-disable-next-line node/no-unsupported-features/es-syntax
+        const commands = (await import(commandsUrl.href)) as Readonly<
+          Record<string, Command<any>>
+        >;
         await runCli(commands, commandArgv);
       },
     )

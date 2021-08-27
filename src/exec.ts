@@ -1,10 +1,11 @@
-import os from "node:os";
-import path from "node:path";
+import { EOL } from "node:os";
+import { relative } from "node:path";
+import { cwd, platform, stderr, stdout } from "node:process";
 import execa, {
   ExecaChildProcess,
-  Options,
-  ExecaReturnValue,
   ExecaError,
+  ExecaReturnValue,
+  Options,
 } from "execa";
 import { hideSecrets, InternalContext, SharedContext } from "./context.js";
 
@@ -44,6 +45,14 @@ export class ExecError extends Error {
     this.stdout = stdout.trim();
   }
 
+  static fromExecaError({ shortMessage: error, stderr, stdout }: ExecaError) {
+    return new ExecError({
+      error,
+      stderr,
+      stdout,
+    });
+  }
+
   toDetailedError({ withOutputs }: Readonly<{ withOutputs: boolean }>) {
     return new Error(
       [
@@ -54,17 +63,8 @@ export class ExecError extends Error {
               ...(this.stderr.length > 0 ? ["STDERR:", this.stderr] : []),
             ]
           : []),
-      ].join(os.EOL),
+      ].join(EOL),
     );
-  }
-
-  // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
-  static fromExecaError({ shortMessage: error, stderr, stdout }: ExecaError) {
-    return new ExecError({
-      error,
-      stderr,
-      stdout,
-    });
   }
 }
 
@@ -80,11 +80,11 @@ export const createSubprocess = (
 
     if (context.debug && !options.silent) {
       if (subprocess.stdout) {
-        subprocess.stdout.pipe(process.stdout);
+        subprocess.stdout.pipe(stdout);
       }
 
       if (subprocess.stderr) {
-        subprocess.stderr.pipe(process.stderr);
+        subprocess.stderr.pipe(stderr);
       }
     }
 
@@ -103,23 +103,16 @@ const getEnvironmentString = ({ env }: Options) => {
     return "";
   }
 
-  if (process.platform === "win32") {
-    return `${Object.entries(env)
-      .map(
-        ([key, value]: readonly [string, string | undefined]) =>
-          `SET ${key}=${value}`,
-      )
-      .join("&&")}&&`;
-  }
-
-  const environmentString = `${Object.entries(env)
+  return `${Object.entries(env)
     .map(
-      ([key, value]: readonly [string, string | undefined]) =>
-        `${key}=${value}`,
+      ([key, value]) =>
+        `${platform === "win32" ? "SET " : ""}${key}=${
+          value === undefined ? "false" : value
+        }`,
     )
-    .join(" ")} `;
-
-  return environmentString;
+    .join(platform === "win32" ? "&&" : " ")}${
+    platform === "win32" ? "&&" : " "
+  }`;
 };
 
 export const getCommandString = (
@@ -130,7 +123,7 @@ export const getCommandString = (
   hideSecrets(
     context,
     `${
-      options.cwd ? `cd ${path.relative(process.cwd(), options.cwd)} && ` : ""
+      options.cwd ? `cd ${relative(cwd(), options.cwd)} && ` : ""
     }${getEnvironmentString(options)}${command
       .map((part) => (part.includes(" ") ? `"${part}"` : part))
       .join(" ")}`,

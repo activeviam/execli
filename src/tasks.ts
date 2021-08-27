@@ -1,19 +1,20 @@
+import { env } from "node:process";
 import { ExecaChildProcess, Options } from "execa";
 import { Listr, ListrTask, ListrTaskWrapper } from "listr2";
 import { DefaultRenderer } from "listr2/dist/renderer/default.renderer";
 import { VerboseRenderer } from "listr2/dist/renderer/verbose.renderer";
 import {
-  stopBackgroundProcess,
   startBackgroundProcess,
+  stopBackgroundProcess,
 } from "./background-process.js";
 import {
   Context,
-  ContextLike,
   ContextHolder,
+  ContextLike,
   createContextHolder,
+  getUserContext,
   InternalContext,
   InternalOptionsContext,
-  getUserContext,
 } from "./context.js";
 import {
   Command,
@@ -97,7 +98,6 @@ type ParentTask<C, A, B> = BaseTask &
           IntersectableContext<C> & IntersectableContext<A>
         > &
           Readonly<{
-            // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
             kill?: (backgroundProcess: ExecaChildProcess) => void;
             /**
              * Once this regexp matches the stderr or stdout of the background process,
@@ -134,12 +134,12 @@ type FlatTask = Readonly<{
 }> &
   (TaggedTask | Readonly<{ children: readonly string[] }>);
 
-type MutableFlatTasks = { [title: string]: FlatTask };
+type MutableFlatTasks = Record<string, FlatTask>;
 export type FlatTasks = Readonly<MutableFlatTasks>;
 
 export const buildFlatTasks = (
   task: Task<any>,
-  // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
+
   flatTasks: MutableFlatTasks = {},
   parentTitle?: string,
 ): FlatTasks => {
@@ -169,9 +169,10 @@ type SkippedByOption = keyof Pick<
   "dryRun" | "from" | "only" | "skip" | "tag" | "until"
 >;
 
-type MutableStaticallySkippedTasks = {
-  [title: string]: Exclude<SkippedByOption, "dryRun">;
-};
+type MutableStaticallySkippedTasks = Record<
+  string,
+  Exclude<SkippedByOption, "dryRun">
+>;
 type StaticallySkippedTasks = Readonly<MutableStaticallySkippedTasks>;
 
 const getAncestorTitles = (
@@ -197,7 +198,7 @@ const buildStaticallySkippedTasks = (
   context: InternalOptionsContext,
   flatTasks: FlatTasks,
   taskTitle: string,
-  // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
+
   staticallySkippedTasks: MutableStaticallySkippedTasks = {},
   ancestorMatchedOnlyOption = false,
   isRootCall = true,
@@ -292,10 +293,10 @@ const shouldSkipByTaskProperty = <C>(
   let result;
 
   if ("task" in task) {
-    // task is a ListrTask.
+    // Task is a ListrTask.
     result = typeof task.skip === "function" ? task.skip() : task.skip;
   } else {
-    // task is as SkippableTask.
+    // Task is as SkippableTask.
     result = task.skip(getUserContext(context));
   }
 
@@ -325,7 +326,7 @@ const processCommandProperties = <C>(
   commandProperties: CommandProperties<C>,
   context: Context<C> & InternalContext,
   title: string,
-  // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
+
   taskWrapper: ListrTaskWrapper<void, any>,
 ): Readonly<{ command: Command; options: Options }> | void => {
   const userContext = getUserContext(context);
@@ -391,10 +392,7 @@ const processCommandProperties = <C>(
 };
 
 const createOutputLine =
-  (
-    // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
-    taskWrapper: ListrTaskWrapper<void, any>,
-  ): OutputLine =>
+  (taskWrapper: ListrTaskWrapper<void, any>): OutputLine =>
   (line) => {
     if (/\r?\n/.test(line)) {
       throw new Error(`Output line cannot contain line break:\n\n: ${line}`);
@@ -433,7 +431,7 @@ const isParentTask = <C, A, B>(
 const runRegularTask = async <C>(
   contextHolder: ContextHolder<C>,
   run: RunnableTask<C>["run"],
-  // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
+
   taskWrapper: ListrTaskWrapper<void, any>,
 ) => {
   const context = contextHolder.get();
@@ -456,7 +454,7 @@ const createCommandTask = <C>(
 ): ListrTask<void> =>
   createSkippableTask(contextHolder.get(), skippedTasks, {
     skip: () => skipCommandTask(contextHolder.get(), skippedTasks, task),
-    // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
+
     async task(_, taskWrapper) {
       const context = contextHolder.get();
       const commandProperties = processCommandProperties(
@@ -492,7 +490,7 @@ const createRegularTask = <C>(
         shouldSkipByTaskProperty(context, task)
       );
     },
-    // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
+
     async task(_, taskWrapper) {
       await runRegularTask(contextHolder, task.run, taskWrapper);
     },
@@ -531,7 +529,7 @@ const createParentTask = <C, A, B>(
     rollback: task.rollback
       ? async (
           _,
-          // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
+
           taskWrapper,
         ) => {
           await runRegularTask(
@@ -599,7 +597,6 @@ const createParentTask = <C, A, B>(
 
         childrenTask = new Listr([
           {
-            // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
             async task(_, taskWrapper) {
               const context = ownContextHolder.get() as Context<
                 IntersectableContext<C> & IntersectableContext<A>
@@ -651,7 +648,7 @@ const createParentTask = <C, A, B>(
           {
             task(
               _,
-              // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
+
               taskWrapper,
             ) {
               if (dryRun) {
@@ -675,7 +672,6 @@ const createParentTask = <C, A, B>(
         const { addContext, title } = task as ParentTask<C, A & ContextLike, B>;
         childrenTask = new Listr([
           {
-            // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
             async task(_, taskWrapper) {
               const context = ownContextHolder.get();
               const outputLine = createOutputLine(taskWrapper);
@@ -724,7 +720,7 @@ function createListrTask<C>(
   return createParentTask(contextHolder, skippedTasks, task);
 }
 
-const showTimer = process.env.NODE_ENV !== "test";
+const showTimer = env.NODE_ENV !== "test";
 
 const defaultRendererOptions: DefaultRenderer["options"] = {
   collapse: false,

@@ -4,7 +4,7 @@ export type SharedContext = Readonly<{
 
 export type Context<CustomContext> = SharedContext & Readonly<CustomContext>;
 
-export type ContextLike<V = unknown> = { [key: string]: V };
+export type ContextLike<V = unknown> = Record<string, V>;
 
 export type InternalOptionsContext = Context<{
   dryRun: boolean;

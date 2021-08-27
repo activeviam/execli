@@ -1,18 +1,16 @@
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
-import path from "node:path";
+import { dirname, join, resolve } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
 // @ts-expect-error: No type declarations available.
 import ncc from "@vercel/ncc";
 
-const packageLibDirectory = path.resolve(
-  import.meta.url.replace("file:", ""),
-  "..",
-);
+const packageLibDirectory = dirname(fileURLToPath(import.meta.url));
 
-const getSource = (filePath: string) => `#!/usr/bin/env node
+const getSource = (commandsUrl: URL) => `#!/usr/bin/env node
 
 import {runCli} from "../commands.js";
 
-import * as commands from "${filePath}";
+import * as commands from "${commandsUrl.href}";
 
 runCli(commands);`;
 
@@ -25,12 +23,12 @@ export const compile = async ({
 }>) => {
   // The temporary directory needs to be inside the package for imports to resolve correctly.
   const temporaryDirectory = await mkdtemp(
-    path.join(packageLibDirectory, "compiling-"),
+    join(packageLibDirectory, "compiling-"),
   );
-  const inputPath = path.join(temporaryDirectory, "input.js");
-  const sourcePath = path.resolve(source);
+  const inputPath = join(temporaryDirectory, "input.js");
+  const sourceUrl = pathToFileURL(resolve(source));
   try {
-    await writeFile(inputPath, getSource(sourcePath));
+    await writeFile(inputPath, getSource(sourceUrl));
     // eslint-disable-next-line @typescript-eslint/no-unsafe-call
     const { code } = (await ncc(inputPath, {
       minify: true,

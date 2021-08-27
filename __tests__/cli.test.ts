@@ -162,7 +162,7 @@ describe("run", () => {
       {
         commandName: "error",
         failing: true,
-        options: ["--from", "Run broken copy command"],
+        options: ["--from", "Run failing script"],
       },
     ],
     [

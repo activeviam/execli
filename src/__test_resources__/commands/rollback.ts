@@ -1,10 +1,11 @@
 import { getCommand, Task } from "../../index.js";
+import { failingNodeScriptCommand } from "./utils.js";
 
 const task: Task = {
   children: [
     {
-      command: ["cp", "unexisting-source", "target"],
-      title: "Run broken copy command",
+      command: failingNodeScriptCommand,
+      title: "Run failing script",
     },
   ],
   async rollback({ exec }) {

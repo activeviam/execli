@@ -46,7 +46,7 @@ Object {
     "[SKIPPED] Skipped by --from option",
     "[STARTED] Nest task",
     "[SKIPPED] Skipped by --from option",
-    "[STARTED] Run broken copy command",
+    "[STARTED] Run failing script",
     "[SKIPPED] Skipped by --from option",
     "[STARTED] Run broken background command",
     "[SKIPPED] Skipped by --from option",
@@ -104,13 +104,12 @@ Object {
 }
 `;
 
-exports[`run failed command task {"commandName":"error","failing":true,"options":["--from","Run broken copy command"]} 1`] = `
+exports[`run failed command task {"commandName":"error","failing":true,"options":["--from","Run failing script"]} 1`] = `
 Object {
   "stderr": Array [
-    "cp: unexisting-source: No such file or directory",
     "[FAILED] Command failed",
     "[FAILED] Command failed",
-    "Error: Command failed with exit code 1: cp unexisting-source target",
+    "Error: Command failed with exit code 1: node --eval console.log('failing'); process.exit(1)",
     "    at ExecError.toDetailedError (file://EXECLI_DIRECTORY/lib/exec.js:22:16)",
     "    at runTask (file://EXECLI_DIRECTORY/lib/tasks.js:385:25)",
     "    at processTicksAndRejections (node:internal/process/task_queues:96:5)",
@@ -122,8 +121,9 @@ Object {
     "[SKIPPED] Skipped by --from option",
     "[STARTED] Nest task",
     "[SKIPPED] Skipped by --from option",
-    "[STARTED] Run broken copy command",
-    "[DATA] cp unexisting-source target",
+    "[STARTED] Run failing script",
+    "[DATA] node --eval \\"console.log('failing'); process.exit(1)\\"",
+    "failing",
   ],
 }
 `;
@@ -135,7 +135,7 @@ Object {
     "[FAILED] Something went wrong.",
     "[FAILED] Something went wrong.",
     "Error: Something went wrong.",
-    "    at run (file://EXECLI_DIRECTORY/lib/__test_resources__/commands/error.js:39:35)",
+    "    at run (file://EXECLI_DIRECTORY/lib/__test_resources__/commands/error.js:40:35)",
     "    at runRegularTask (file://EXECLI_DIRECTORY/lib/tasks.js:181:26)",
     "    at Task.task (file://EXECLI_DIRECTORY/lib/tasks.js:212:15)",
     "    at Task.run (EXECLI_DIRECTORY/node_modules/listr2/dist/lib/task.js:213:45)",
@@ -247,7 +247,6 @@ Object {
 exports[`run rollback {"commandName":"rollback","failing":true} 1`] = `
 Object {
   "stderr": Array [
-    "cp: unexisting-source: No such file or directory",
     "[FAILED] Command failed",
     "[FAILED] Command failed",
     "[ROLLBACK] Parent task",
@@ -258,8 +257,9 @@ Object {
   ],
   "stdout": Array [
     "[STARTED] Parent task",
-    "[STARTED] Run broken copy command",
-    "[DATA] cp unexisting-source target",
+    "[STARTED] Run failing script",
+    "[DATA] node --eval \\"console.log('failing'); process.exit(1)\\"",
+    "failing",
     "[DATA] echo rollback",
     "rollback",
   ],

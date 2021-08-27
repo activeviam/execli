@@ -1,5 +1,6 @@
 import { EOL } from "node:os";
 import { dirname, join } from "node:path";
+import { cwd } from "node:process";
 import execa from "execa";
 import pkgDir from "pkg-dir";
 import tempy from "tempy";
@@ -19,7 +20,7 @@ test("compile", async () => {
   await execa("node", [binPath, "compile", commandsFilePath, targetPath]);
   const { stdout } = await execa(targetPath, ["simpleCommand", "--debug"]);
   expect(stdout).toContain("Print current directory");
-  expect(stdout).toContain(process.cwd());
+  expect(stdout).toContain(cwd());
 }, 10_000);
 
 describe("run", () => {
@@ -64,7 +65,7 @@ describe("run", () => {
       "debug",
       [...runSimpleCommandArguments, "--debug"],
       {
-        outputs: ["[SUCCESS] Print current directory", process.cwd()],
+        outputs: ["[SUCCESS] Print current directory", cwd()],
       },
     ],
     [

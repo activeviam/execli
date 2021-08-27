@@ -145,7 +145,7 @@ const getInternalOptions = (
 };
 
 export const runCli = async (commands: Commands, argv?: string[]) => {
-  let yargsInstance = yargs(argv ?? hideBin(process.argv));
+  let yargsInstance = yargs(argv ? hideBin(argv) : []);
 
   for (const [commandName, command] of Object.entries(commands)) {
     const flatTasks = buildFlatTasks(command.task);

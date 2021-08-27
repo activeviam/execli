@@ -1,19 +1,20 @@
+import { env } from "node:process";
 import { ExecaChildProcess, Options } from "execa";
 import { Listr, ListrTask, ListrTaskWrapper } from "listr2";
 import { DefaultRenderer } from "listr2/dist/renderer/default.renderer";
 import { VerboseRenderer } from "listr2/dist/renderer/verbose.renderer";
 import {
-  stopBackgroundProcess,
   startBackgroundProcess,
+  stopBackgroundProcess,
 } from "./background-process.js";
 import {
   Context,
-  ContextLike,
   ContextHolder,
+  ContextLike,
   createContextHolder,
+  getUserContext,
   InternalContext,
   InternalOptionsContext,
-  getUserContext,
 } from "./context.js";
 import {
   Command,
@@ -719,7 +720,7 @@ function createListrTask<C>(
   return createParentTask(contextHolder, skippedTasks, task);
 }
 
-const showTimer = process.env.NODE_ENV !== "test";
+const showTimer = env.NODE_ENV !== "test";
 
 const defaultRendererOptions: DefaultRenderer["options"] = {
   collapse: false,

@@ -1,5 +1,5 @@
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
-import { rm, mkdtemp, writeFile } from "node:fs/promises";
 // @ts-expect-error: No type declarations available.
 import ncc from "@vercel/ncc";
 

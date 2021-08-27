@@ -1,13 +1,14 @@
 #!/usr/bin/env node
 
-import { join, isAbsolute } from "node:path";
+import { isAbsolute, join } from "node:path";
+import { argv, cwd } from "node:process";
 import yargs from "yargs";
 import { hideBin } from "yargs/helpers";
-import { runCli, Command } from "./commands.js";
+import { Command, runCli } from "./commands.js";
 import { compile } from "./compile.js";
 
 export const createCli = () =>
-  yargs(hideBin(process.argv))
+  yargs(hideBin(argv))
     .command(
       "compile <source> <target>",
       "Compile the commands at the given path to a single executable Node.js file, together with all the dependencies",
@@ -46,7 +47,8 @@ export const createCli = () =>
       }>) => {
         const commandsAbsolutePath = isAbsolute(commandsPath)
           ? commandsPath
-          : join(process.cwd(), commandsPath);
+          : join(cwd(), commandsPath);
+        // eslint-disable-next-line node/no-unsupported-features/es-syntax
         const commands = (await import(commandsAbsolutePath)) as Readonly<
           Record<string, Command<any>>
         >;

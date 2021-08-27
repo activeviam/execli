@@ -1,11 +1,12 @@
+import { Buffer } from "node:buffer";
 import { ExecaChildProcess, Options } from "execa";
 import { ContextLike, InternalContext } from "./context.js";
 import {
   Command,
-  ExecError,
-  OutputLine,
-  getCommandString,
   createSubprocess,
+  ExecError,
+  getCommandString,
+  OutputLine,
 } from "./exec.js";
 
 export const startBackgroundProcess = async <C extends ContextLike<string>>({
@@ -59,7 +60,7 @@ export const startBackgroundProcess = async <C extends ContextLike<string>>({
 
   if (!Array.isArray(matches)) {
     throw new ExecError({
-      error: `Background process exited before matching the regexp. Command was: ${command}`,
+      error: `Background process exited before matching the regexp. Command was: ${commandString}`,
       stderr: String(Buffer.concat(stderrChunks)),
       stdout: String(Buffer.concat(stdoutChunks)),
     });

@@ -1,11 +1,11 @@
 import { EOL } from "node:os";
 import { relative } from "node:path";
-import { cwd, stdout, stderr, platform } from "node:process";
+import { cwd, platform, stderr, stdout } from "node:process";
 import execa, {
   ExecaChildProcess,
-  Options,
-  ExecaReturnValue,
   ExecaError,
+  ExecaReturnValue,
+  Options,
 } from "execa";
 import { hideSecrets, InternalContext, SharedContext } from "./context.js";
 

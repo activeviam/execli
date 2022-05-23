@@ -1,7 +1,8 @@
 import { EOL } from "node:os";
 import { relative } from "node:path";
 import { cwd, platform, stderr, stdout } from "node:process";
-import execa, {
+import {
+  execa,
   ExecaChildProcess,
   ExecaError,
   ExecaReturnValue,
@@ -25,6 +26,14 @@ const isExecaError = (error: unknown): error is ExecaError =>
   error instanceof Error && "command" in error && "isCanceled" in error;
 
 export class ExecError extends Error {
+  static fromExecaError({ shortMessage: error, stderr, stdout }: ExecaError) {
+    return new ExecError({
+      error,
+      stderr,
+      stdout,
+    });
+  }
+
   readonly error: string;
   readonly stderr: string;
   readonly stdout: string;
@@ -43,14 +52,6 @@ export class ExecError extends Error {
     this.error = error;
     this.stderr = stderr.trim();
     this.stdout = stdout.trim();
-  }
-
-  static fromExecaError({ shortMessage: error, stderr, stdout }: ExecaError) {
-    return new ExecError({
-      error,
-      stderr,
-      stdout,
-    });
   }
 
   toDetailedError({ withOutputs }: Readonly<{ withOutputs: boolean }>) {
@@ -115,6 +116,18 @@ const getEnvironmentString = ({ env }: Options) => {
   }`;
 };
 
+const getCommandRelativeDirectory = (
+  commandDirectory: string | URL,
+): string | undefined => {
+  if (commandDirectory instanceof URL) {
+    throw new TypeError(
+      `Directories of type URL are not supported: ${commandDirectory}`,
+    );
+  }
+
+  return relative(cwd(), commandDirectory);
+};
+
 export const getCommandString = (
   command: Command,
   context: InternalContext,
@@ -123,7 +136,7 @@ export const getCommandString = (
   hideSecrets(
     context,
     `${
-      options.cwd ? `cd ${relative(cwd(), options.cwd)} && ` : ""
+      options.cwd ? `cd ${getCommandRelativeDirectory(options.cwd)} && ` : ""
     }${getEnvironmentString(options)}${command
       .map((part) => (part.includes(" ") ? `"${part}"` : part))
       .join(" ")}`,

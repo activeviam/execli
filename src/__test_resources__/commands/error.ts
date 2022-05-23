@@ -1,40 +1,14 @@
 import { getCommand, Task } from "../../index.js";
 import { failingNodeScriptCommand } from "./utils.js";
 
-const runBrokenBackgroundCommand: Task<
-  void,
-  void,
-  Readonly<{ nothing: string }>
-> = {
-  background: {
-    command: failingNodeScriptCommand,
-    match: /\b(?<nothing>\w+)\b/,
+const slowButSuccessfulTask: Task = {
+  async run({ outputLine }) {
+    await new Promise((resolve) => {
+      setTimeout(resolve, 1000);
+    });
+    outputLine("Slow but successful");
   },
-  children: [
-    {
-      command: ["ls"],
-      title: "List files",
-    },
-  ],
-  title: "Run broken background command",
-};
-
-const runUnmatchedBackgroundCommand: Task<
-  void,
-  void,
-  Readonly<{ nomatch: string }>
-> = {
-  background: {
-    command: ["ls"],
-    match: /\b(?<nomatch>nomatch)\b/,
-  },
-  children: [
-    {
-      command: ["echo", "something"],
-      title: "Echo something",
-    },
-  ],
-  title: "Run unmatched background command",
+  title: "Slow successful task",
 };
 
 export const error = getCommand({
@@ -46,6 +20,7 @@ export const error = getCommand({
       },
       {
         children: [
+          slowButSuccessfulTask,
           {
             run() {
               throw new Error("Something went wrong.");
@@ -59,8 +34,6 @@ export const error = getCommand({
         command: failingNodeScriptCommand,
         title: "Run failing script",
       },
-      runBrokenBackgroundCommand,
-      runUnmatchedBackgroundCommand,
       {
         command: ["echo", "finally"],
         title: "Echo finally",

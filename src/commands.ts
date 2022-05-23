@@ -14,7 +14,6 @@ export type OptionsContext<O extends CommandOptions | void = void> =
 export type Command<
   O extends CommandOptions | void = void,
   A = void,
-  B = void,
 > = Readonly<
   O extends CommandOptions
     ? {
@@ -23,18 +22,14 @@ export type Command<
     : unknown
 > &
   Readonly<{
-    task: Task<OptionsContext<O>, A, B>;
+    task: Task<OptionsContext<O>, A>;
   }>;
 
 // Used to infer the generic parameters.
 // See https://stackoverflow.com/questions/50509952/dynamic-generic-type-inference-for-object-literals-in-typescript.
-export const getCommand = <
-  O extends CommandOptions | void = void,
-  A = void,
-  B = void,
->(
-  command: Command<O, A, B>,
-): Command<O, A, B> => command;
+export const getCommand = <O extends CommandOptions | void = void, A = void>(
+  command: Command<O, A>,
+): Command<O, A> => command;
 
 type Commands = Readonly<Record<string, Command<any>>>;
 

@@ -4,6 +4,8 @@ module.exports = {
   plugins: ["sort-destructure-keys", "typescript-sort-keys"],
   prettier: true,
   rules: {
+    // Too annoying.
+    "@typescript-eslint/restrict-template-expressions": "off",
     // Forbid function declarations
     "func-style": ["error", "expression", { allowArrowFunctions: true }],
     // Named export are better for static analysis.

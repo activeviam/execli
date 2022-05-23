@@ -1,58 +1,9 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`run background command {"commandName":"background"} 1`] = `
-Object {
-  "stdout": Array [
-    "[STARTED] Parent task",
-    "[STARTED] Parent task [starting background process]",
-    "[DATA] node --eval \\"setTimeout(() => {console.log('f' + 'o' + 'o'); setTimeout(() => {}, 5000)}, 500)\\"",
-    "[SUCCESS] Parent task [starting background process]",
-    "[STARTED] Parent task [with background process]",
-    "[STARTED] Print matched output",
-    "[DATA] echo foo",
-    "foo",
-    "[SUCCESS] Print matched output",
-    "[SUCCESS] Parent task [with background process]",
-    "[STARTED] Parent task [stopping background process]",
-    "[SUCCESS] Parent task [stopping background process]",
-    "[SUCCESS] Parent task",
-  ],
-}
-`;
-
 exports[`run command required {"failing":true} 1`] = `
 Object {
   "stderr": Array [
     "Not enough non-option arguments: got 0, need at least 1",
-  ],
-}
-`;
-
-exports[`run command task not matching regexp {"commandName":"error","failing":true,"options":["--from","Run unmatched background command"]} 1`] = `
-Object {
-  "stderr": Array [
-    "[FAILED] Command failed",
-    "[FAILED] Command failed",
-    "[FAILED] Command failed",
-    "Error: Background process exited before matching the regexp. Command was: ls",
-    "    at ExecError.toDetailedError (SOME_EXECLI_PATH)",
-    "    at runTask (SOME_EXECLI_PATH)",
-    "    at processTicksAndRejections (SOME_NODE_PATH)",
-    "    at async Object.handler (SOME_EXECLI_PATH)",
-  ],
-  "stdout": Array [
-    "[STARTED] Parent task",
-    "[STARTED] Print current directory",
-    "[SKIPPED] Skipped by --from option",
-    "[STARTED] Nest task",
-    "[SKIPPED] Skipped by --from option",
-    "[STARTED] Run failing script",
-    "[SKIPPED] Skipped by --from option",
-    "[STARTED] Run broken background command",
-    "[SKIPPED] Skipped by --from option",
-    "[STARTED] Run unmatched background command",
-    "[STARTED] Run unmatched background command [starting background process]",
-    "[DATA] ls",
   ],
 }
 `;
@@ -139,7 +90,6 @@ Object {
     "    at runRegularTask (SOME_EXECLI_PATH)",
     "    at Task.task (SOME_EXECLI_PATH)",
     "    at Task.run (SOME_EXECLI_PATH)",
-    "    at processTicksAndRejections (SOME_NODE_PATH)",
   ],
   "stdout": Array [
     "[STARTED] Parent task",
@@ -148,6 +98,9 @@ Object {
     "SOME_EXECLI_PATH",
     "[SUCCESS] Print current directory",
     "[STARTED] Nest task",
+    "[STARTED] Slow successful task",
+    "[DATA] Slow but successful",
+    "[SUCCESS] Slow successful task",
     "[STARTED] Throw exception",
   ],
 }

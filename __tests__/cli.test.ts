@@ -1,10 +1,13 @@
+import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-import execa from "execa";
-import pkgDir from "pkg-dir";
-import tempy from "tempy";
-import { bin } from "../package.json";
+import { execa } from "execa";
+import { packageDirectorySync } from "pkg-dir";
+import { temporaryFileTask } from "tempy";
 
-const packageRootDirectory = pkgDir.sync()!;
+const { bin } = JSON.parse(readFileSync("package.json", "utf8")) as Readonly<{
+  bin: string;
+}>;
+const packageRootDirectory = packageDirectorySync();
 const binPath = join(packageRootDirectory, bin);
 const commandsFilePath = join(
   dirname(binPath),
@@ -16,11 +19,15 @@ const commandsFilePath = join(
 test("compile", async () => {
   // Use a temporary file path outside the package to make sure all the dependencies
   // are correctly bundled and are not required through the package's node_modules.
-  const targetPath = tempy.file({ extension: "mjs" });
-  await execa("node", [binPath, "compile", commandsFilePath, targetPath]);
-  const { stdout } = await execa(targetPath, ["simple", "--debug"]);
-  expect(stdout).toContain("Echo middle");
-  expect(stdout).toContain("mystery");
+  await temporaryFileTask(
+    async (targetPath) => {
+      await execa("node", [binPath, "compile", commandsFilePath, targetPath]);
+      const { stdout } = await execa(targetPath, ["simple", "--debug"]);
+      expect(stdout).toContain("Echo middle");
+      expect(stdout).toContain("mystery");
+    },
+    { extension: "mjs" },
+  );
 }, 15_000);
 
 describe("run", () => {
@@ -144,12 +151,6 @@ describe("run", () => {
       },
     ],
     [
-      "background command",
-      {
-        commandName: "background",
-      },
-    ],
-    [
       "failed regular task",
       {
         commandName: "error",
@@ -162,14 +163,6 @@ describe("run", () => {
         commandName: "error",
         failing: true,
         options: ["--from", "Run failing script"],
-      },
-    ],
-    [
-      "command task not matching regexp",
-      {
-        commandName: "error",
-        failing: true,
-        options: ["--from", "Run unmatched background command"],
       },
     ],
     [

@@ -1,7 +1,6 @@
 {
   "compilerOptions": {
-    "noEmit": true,
-    "resolveJsonModule": true
+    "noEmit": true
   },
   "extends": "./tsconfig.base.json",
   "include": ["__tests__"]

@@ -1,12 +1,11 @@
 import { env } from "node:process";
-import { ExecaChildProcess, Options } from "execa";
-import { Listr, ListrTask, ListrTaskWrapper } from "listr2";
-import { DefaultRenderer } from "listr2/dist/renderer/default.renderer";
-import { VerboseRenderer } from "listr2/dist/renderer/verbose.renderer";
+import { Options } from "execa";
 import {
-  startBackgroundProcess,
-  stopBackgroundProcess,
-} from "./background-process.js";
+  Listr,
+  ListrGetRendererOptions,
+  ListrTask,
+  ListrTaskWrapper,
+} from "listr2";
 import {
   Context,
   ContextHolder,
@@ -67,13 +66,11 @@ type RegularTask<C> = BaseLeafTask<C> & RunnableTask<C>;
 
 type LeafTask<C> = CommandTask<C> | RegularTask<C>;
 
-type IntersectableContext<C, V = unknown> = C extends ContextLike<V>
-  ? C
-  : unknown;
+type IntersectableContext<C> = C extends ContextLike<any> ? C : unknown;
 
 type NestedChildrenMarker = false;
 
-type ParentTask<C, A, B> = BaseTask &
+type ParentTask<C, A> = BaseTask &
   Readonly<{
     rollback?: RunnableTask<IntersectableContext<C>>["run"];
   }> &
@@ -92,42 +89,19 @@ type ParentTask<C, A, B> = BaseTask &
         ) => A | Promise<A>;
       }>
     : unknown) &
-  (B extends ContextLike<string>
-    ? Readonly<{
-        background: CommandProperties<
-          IntersectableContext<C> & IntersectableContext<A>
-        > &
-          Readonly<{
-            kill?: (backgroundProcess: ExecaChildProcess) => void;
-            /**
-             * Once this regexp matches the stderr or stdout of the background process,
-             * the children tasks will start with the captured named groups in their context.
-             * When running dry, the value of the named groups will be set to their name.
-             */
-            match: Readonly<RegExp>;
-          }>;
-      }>
-    : unknown) &
   Readonly<{
     children: A extends NestedChildrenMarker
       ? any
-      : B extends NestedChildrenMarker
-      ? any
       : ReadonlyArray<
           Task<
-            IntersectableContext<C> &
-              IntersectableContext<A> &
-              IntersectableContext<B, string>,
-            NestedChildrenMarker,
+            IntersectableContext<C> & IntersectableContext<A>,
             NestedChildrenMarker
           >
         >;
     concurrent?: boolean | number;
   }>;
 
-export type Task<C = void, A = void, B = void> =
-  | LeafTask<C>
-  | ParentTask<C, A, B>;
+export type Task<C = void, A = void> = LeafTask<C> | ParentTask<C, A>;
 
 type FlatTask = Readonly<{
   parentTitle?: string;
@@ -182,7 +156,7 @@ const getAncestorTitles = (
   const ancestorTitles = new Set<string>();
   let currentTitle: string | undefined = taskTitle;
 
-  while (true) {
+  for (;;) {
     currentTitle = flatTasks[currentTitle].parentTitle;
     if (currentTitle === undefined) {
       break;
@@ -424,9 +398,8 @@ const isCommandTask = <C>(task: Task<C>): task is CommandTask<C> =>
 const isRegularTask = <C>(task: Task<C>): task is RegularTask<C> =>
   "run" in task;
 
-const isParentTask = <C, A, B>(
-  task: Task<C, A, B>,
-): task is ParentTask<C, A, B> => "children" in task;
+const isParentTask = <C, A>(task: Task<C, A>): task is ParentTask<C, A> =>
+  "children" in task;
 
 const runRegularTask = async <C>(
   contextHolder: ContextHolder<C>,
@@ -499,7 +472,7 @@ const createRegularTask = <C>(
 
 const getStaticParentTaskSkipReason = <A, B, C>(
   skippedTasks: StaticallySkippedTasks,
-  task: ParentTask<C, A, B>,
+  task: ParentTask<C, A>,
 ): false | string => {
   const selfSkipReason = skippedTasks[task.title];
 
@@ -520,10 +493,10 @@ const getStaticParentTaskSkipReason = <A, B, C>(
   return false;
 };
 
-const createParentTask = <C, A, B>(
+const createParentTask = <C, A>(
   contextHolder: ContextHolder<C>,
   skippedTasks: StaticallySkippedTasks,
-  task: ParentTask<C, A, B>,
+  task: ParentTask<C, A>,
 ): ListrTask<void> =>
   createSkippableTask(contextHolder.get(), skippedTasks, {
     rollback: task.rollback
@@ -579,97 +552,9 @@ const createParentTask = <C, A, B>(
         },
       );
 
-      if ("background" in task) {
-        const childrenTaskWithBackgroundProcess = childrenTask;
-        const {
-          background: {
-            command: commandOrCommandGetter,
-            kill,
-            match,
-            options: optionsOrOptionsGetter,
-          },
-          title,
-        } = task as ParentTask<C, A, B & ContextLike<string>>;
-
-        const backgroundProcessStartingTaskTitle = `${title} [starting background process]`;
-
-        let backgroundProcess: ExecaChildProcess;
-
-        childrenTask = new Listr([
-          {
-            async task(_, taskWrapper) {
-              const context = ownContextHolder.get() as Context<
-                IntersectableContext<C> & IntersectableContext<A>
-              > &
-                InternalContext;
-
-              const commandProperties = processCommandProperties(
-                {
-                  command: commandOrCommandGetter,
-                  options: optionsOrOptionsGetter,
-                },
-                context,
-                title,
-                taskWrapper,
-              );
-
-              if (!commandProperties) {
-                return;
-              }
-
-              const outputLine = createOutputLine(taskWrapper);
-              const startedBackgroundProcess = await startBackgroundProcess({
-                command: commandProperties.command,
-                context,
-                match,
-                options: commandProperties.options,
-                outputLine,
-              });
-
-              backgroundProcess = startedBackgroundProcess.backgroundProcess;
-
-              ownContextHolder.add(
-                startedBackgroundProcess.namedCapturedGroups,
-              );
-            },
-            title: backgroundProcessStartingTaskTitle,
-          },
-          {
-            rollback() {
-              // @ts-expect-error: No await on purpose.
-              // eslint-disable-next-line @typescript-eslint/no-misused-promises
-              if (backgroundProcess) {
-                stopBackgroundProcess({ backgroundProcess, kill });
-              }
-            },
-            task: () => childrenTaskWithBackgroundProcess,
-            title: `${title} [with background process]`,
-          },
-          {
-            task(
-              _,
-
-              taskWrapper,
-            ) {
-              if (dryRun) {
-                taskWrapper.skip(getSkipReason("dryRun"));
-                return;
-              }
-
-              // @ts-expect-error: No await on purpose.
-              // eslint-disable-next-line @typescript-eslint/no-misused-promises
-              if (backgroundProcess) {
-                stopBackgroundProcess({ backgroundProcess, kill });
-              }
-            },
-            title: `${title} [stopping background process]`,
-          },
-        ]);
-      }
-
       if ("addContext" in task) {
         const childrenTaskWithAdddedContext = childrenTask;
-        const { addContext, title } = task as ParentTask<C, A & ContextLike, B>;
+        const { addContext, title } = task as ParentTask<C, A & ContextLike>;
         childrenTask = new Listr([
           {
             async task(_, taskWrapper) {
@@ -722,14 +607,14 @@ function createListrTask<C>(
 
 const showTimer = env.NODE_ENV !== "test";
 
-const defaultRendererOptions: DefaultRenderer["options"] = {
+const defaultRendererOptions: ListrGetRendererOptions<"default"> = {
   collapse: false,
   collapseErrors: false,
   collapseSkips: false,
   showTimer,
 };
 
-const verboseRendererOptions: VerboseRenderer["options"] = {
+const verboseRendererOptions: ListrGetRendererOptions<"verbose"> = {
   showTimer,
 };
 

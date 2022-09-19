@@ -1,16 +1,16 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
 exports[`run command required {"failing":true} 1`] = `
-Object {
-  "stderr": Array [
+{
+  "stderr": [
     "Not enough non-option arguments: got 0, need at least 1",
   ],
 }
 `;
 
 exports[`run debug {"commandName":"simple","options":["--debug"]} 1`] = `
-Object {
-  "stdout": Array [
+{
+  "stdout": [
     "[STARTED] Parent task",
     "[STARTED] Echo start",
     "[DATA] echo start",
@@ -30,16 +30,16 @@ Object {
 `;
 
 exports[`run debug forced in non interactive terminals {"commandName":"simple","failing":true,"options":["--no-debug"]} 1`] = `
-Object {
-  "stderr": Array [
+{
+  "stderr": [
     "Cannot opt-out of debug mode in non interactive terminals.",
   ],
 }
 `;
 
 exports[`run dryRun {"commandName":"simple","options":["--dryRun"]} 1`] = `
-Object {
-  "stdout": Array [
+{
+  "stdout": [
     "[STARTED] Parent task",
     "[STARTED] Echo start",
     "[TITLE] Echo start ($ echo start)",
@@ -56,8 +56,8 @@ Object {
 `;
 
 exports[`run failed command task {"commandName":"error","failing":true,"options":["--from","Run failing script"]} 1`] = `
-Object {
-  "stderr": Array [
+{
+  "stderr": [
     "[FAILED] Command failed",
     "[FAILED] Command failed",
     "Error: Command failed with exit code 1: node --eval console.log('failing'); process.exit(1)",
@@ -66,22 +66,22 @@ Object {
     "    at processTicksAndRejections (SOME_NODE_PATH)",
     "    at async Object.handler (SOME_EXECLI_PATH)",
   ],
-  "stdout": Array [
+  "stdout": [
     "[STARTED] Parent task",
     "[STARTED] Print current directory",
     "[SKIPPED] Skipped by --from option",
     "[STARTED] Nest task",
     "[SKIPPED] Skipped by --from option",
     "[STARTED] Run failing script",
-    "[DATA] node --eval \\"console.log('failing'); process.exit(1)\\"",
+    "[DATA] node --eval "console.log('failing'); process.exit(1)"",
     "failing",
   ],
 }
 `;
 
 exports[`run failed regular task {"commandName":"error","failing":true} 1`] = `
-Object {
-  "stderr": Array [
+{
+  "stderr": [
     "[FAILED] Something went wrong.",
     "[FAILED] Something went wrong.",
     "[FAILED] Something went wrong.",
@@ -91,7 +91,7 @@ Object {
     "    at Task.task (SOME_EXECLI_PATH)",
     "    at Task.run (SOME_EXECLI_PATH)",
   ],
-  "stdout": Array [
+  "stdout": [
     "[STARTED] Parent task",
     "[STARTED] Print current directory",
     "[DATA] pwd",
@@ -107,8 +107,8 @@ Object {
 `;
 
 exports[`run from {"commandName":"simple","options":["--from","Echo middle"]} 1`] = `
-Object {
-  "stdout": Array [
+{
+  "stdout": [
     "[STARTED] Parent task",
     "[STARTED] Echo start",
     "[SKIPPED] Skipped by --from option",
@@ -126,8 +126,8 @@ Object {
 `;
 
 exports[`run only (exact title) {"commandName":"simple","options":["--only","Echo start"]} 1`] = `
-Object {
-  "stdout": Array [
+{
+  "stdout": [
     "[STARTED] Parent task",
     "[STARTED] Echo start",
     "[DATA] echo start",
@@ -143,17 +143,17 @@ Object {
 `;
 
 exports[`run only (neither exact title nor slug) {"commandName":"simple","failing":true,"options":["--only","EcHo-StArt"]} 1`] = `
-Object {
-  "stderr": Array [
+{
+  "stderr": [
     "Invalid values:",
-    "  Argument: only, Given: \\"EcHo-StArt\\", Choices: \\"Echo end\\", \\"Echo middle\\", \\"Echo start\\", \\"Parent task\\"",
+    "  Argument: only, Given: "EcHo-StArt", Choices: "Echo end", "Echo middle", "Echo start", "Parent task"",
   ],
 }
 `;
 
 exports[`run only (slug) {"commandName":"simple","options":["--only","echo-start"]} 1`] = `
-Object {
-  "stdout": Array [
+{
+  "stdout": [
     "[STARTED] Parent task",
     "[STARTED] Echo start",
     "[DATA] echo start",
@@ -169,8 +169,8 @@ Object {
 `;
 
 exports[`run option (existing) {"commandName":"simple","options":["--flag"]} 1`] = `
-Object {
-  "stdout": Array [
+{
+  "stdout": [
     "[STARTED] Parent task",
     "[STARTED] Echo start",
     "[DATA] echo start",
@@ -190,16 +190,16 @@ Object {
 `;
 
 exports[`run option (unexisting) {"commandName":"simple","failing":true,"options":["--unexisting-option"]} 1`] = `
-Object {
-  "stderr": Array [
+{
+  "stderr": [
     "Unknown arguments: unexisting-option, unexistingOption",
   ],
 }
 `;
 
 exports[`run rollback {"commandName":"rollback","failing":true} 1`] = `
-Object {
-  "stderr": Array [
+{
+  "stderr": [
     "[FAILED] Command failed",
     "[FAILED] Command failed",
     "[ROLLBACK] Parent task",
@@ -208,10 +208,10 @@ Object {
     "    at processTicksAndRejections (SOME_NODE_PATH)",
     "    at async SOME_EXECLI_PATH",
   ],
-  "stdout": Array [
+  "stdout": [
     "[STARTED] Parent task",
     "[STARTED] Run failing script",
-    "[DATA] node --eval \\"console.log('failing'); process.exit(1)\\"",
+    "[DATA] node --eval "console.log('failing'); process.exit(1)"",
     "failing",
     "[DATA] echo rollback",
     "rollback",
@@ -220,8 +220,8 @@ Object {
 `;
 
 exports[`run skip (exact title) {"commandName":"simple","options":["--skip","Echo start"]} 1`] = `
-Object {
-  "stdout": Array [
+{
+  "stdout": [
     "[STARTED] Parent task",
     "[STARTED] Echo start",
     "[SKIPPED] Skipped by --skip option",
@@ -239,17 +239,17 @@ Object {
 `;
 
 exports[`run skip (neither exact title nor slug) {"commandName":"simple","failing":true,"options":["--skip","EcHo-StArt"]} 1`] = `
-Object {
-  "stderr": Array [
+{
+  "stderr": [
     "Invalid values:",
-    "  Argument: skip, Given: \\"EcHo-StArt\\", Choices: \\"Echo end\\", \\"Echo middle\\", \\"Echo start\\", \\"Parent task\\"",
+    "  Argument: skip, Given: "EcHo-StArt", Choices: "Echo end", "Echo middle", "Echo start", "Parent task"",
   ],
 }
 `;
 
 exports[`run skip (slug) {"commandName":"simple","options":["--skip","echo-start"]} 1`] = `
-Object {
-  "stdout": Array [
+{
+  "stdout": [
     "[STARTED] Parent task",
     "[STARTED] Echo start",
     "[SKIPPED] Skipped by --skip option",
@@ -267,34 +267,36 @@ Object {
 `;
 
 exports[`run tag (existing) {"commandName":"simple","options":["--tag","a"]} 1`] = `
-Object {
-  "stdout": Array [
+{
+  "stdout": [
     "[STARTED] Parent task",
     "[STARTED] Echo start",
-    "[DATA] echo start",
-    "start",
-    "[SUCCESS] Echo start",
+    "[SKIPPED] Skipped by --tag option",
     "[STARTED] Echo middle",
-    "[SKIPPED] Skipped by --tag option",
+    "[DATA] echo mystery",
+    "mystery",
+    "[SUCCESS] Echo middle",
     "[STARTED] Echo end",
-    "[SKIPPED] Skipped by --tag option",
+    "[DATA] echo end",
+    "end",
+    "[SUCCESS] Echo end",
     "[SUCCESS] Parent task",
   ],
 }
 `;
 
 exports[`run tag (unexisting) {"commandName":"simple","failing":true,"options":["--tag","d"]} 1`] = `
-Object {
-  "stderr": Array [
+{
+  "stderr": [
     "Invalid values:",
-    "  Argument: tag, Given: \\"d\\", Choices: \\"a\\", \\"b\\", \\"c\\"",
+    "  Argument: tag, Given: "d", Choices: "a", "b", "c"",
   ],
 }
 `;
 
 exports[`run until {"commandName":"simple","options":["--until","Echo middle"]} 1`] = `
-Object {
-  "stdout": Array [
+{
+  "stdout": [
     "[STARTED] Parent task",
     "[STARTED] Echo start",
     "[DATA] echo start",

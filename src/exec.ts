@@ -107,9 +107,7 @@ const getEnvironmentString = ({ env }: Options) => {
   return `${Object.entries(env)
     .map(
       ([key, value]) =>
-        `${platform === "win32" ? "SET " : ""}${key}=${
-          value === undefined ? "false" : value
-        }`,
+        `${platform === "win32" ? "SET " : ""}${key}=${value ?? "false"}`,
     )
     .join(platform === "win32" ? "&&" : " ")}${
     platform === "win32" ? "&&" : " "

@@ -7,7 +7,7 @@ import { temporaryFileTask } from "tempy";
 const { bin } = JSON.parse(readFileSync("package.json", "utf8")) as Readonly<{
   bin: string;
 }>;
-const packageRootDirectory = packageDirectorySync();
+const packageRootDirectory = packageDirectorySync()!;
 const binPath = join(packageRootDirectory, bin);
 const commandsFilePath = join(
   dirname(binPath),

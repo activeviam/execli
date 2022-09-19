@@ -229,9 +229,7 @@ const buildStaticallySkippedTasks = (
     staticallySkippedTasks[taskTitle] = "only";
   } else if (
     context.tag.length > 0 &&
-    context.tag.every(
-      (givenTag) => !(("tags" in task && task.tags) || []).includes(givenTag),
-    )
+    context.tag.every((givenTag) => (task?.tags ?? []).includes(givenTag))
   ) {
     staticallySkippedTasks[taskTitle] = "tag";
   }

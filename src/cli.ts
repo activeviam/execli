@@ -51,7 +51,6 @@ const runCommand: CommandModule<unknown, Readonly<{ path: string }>> = {
       ? commandsPath
       : join(cwd(), commandsPath);
     const commandsUrl = pathToFileURL(commandsAbsolutePath);
-    // eslint-disable-next-line node/no-unsupported-features/es-syntax
     const commands = (await import(commandsUrl.href)) as Readonly<
       Record<string, Command<any>>
     >;

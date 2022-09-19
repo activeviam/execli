@@ -1,11 +1,23 @@
 "use strict";
 
 module.exports = {
+  overrides: [
+    {
+      files: "**/*.{ts,tsx}",
+      rules: {
+        "@typescript-eslint/consistent-type-exports": ["off"],
+        "@typescript-eslint/consistent-type-imports": [
+          "error",
+          { prefer: "no-type-imports" },
+        ],
+        // Too annoying.
+        "@typescript-eslint/restrict-template-expressions": "off",
+      },
+    },
+  ],
   plugins: ["sort-destructure-keys", "typescript-sort-keys"],
   prettier: true,
   rules: {
-    // Too annoying.
-    "@typescript-eslint/restrict-template-expressions": "off",
     // Forbid function declarations
     "func-style": ["error", "expression", { allowArrowFunctions: true }],
     // Named export are better for static analysis.
@@ -20,6 +32,8 @@ module.exports = {
         "newlines-between": "never",
       },
     ],
+    // Does not support `"exports"` in `package.json`.
+    "n/file-extension-in-import": "off",
     "sort-destructure-keys/sort-destructure-keys": [
       "error",
       {

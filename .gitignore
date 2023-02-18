@@ -1,5 +1,3 @@
-# Picked up by ESLint to lint its own config
-!.eslintrc.js
-
 lib/
 node_modules/
+*.tsbuildinfo

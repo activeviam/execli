@@ -3,5 +3,5 @@
     "noEmit": true
   },
   "extends": "./tsconfig.base.json",
-  "include": ["__tests__"]
+  "include": ["tests"]
 }

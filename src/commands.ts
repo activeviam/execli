@@ -1,10 +1,12 @@
+import { cpus } from "node:os";
 import { argv } from "node:process";
-import isInteractive from "is-interactive";
-import slugify from "slugify";
+
+import slugify from "@sindresorhus/slugify";
 import yargs, { CommandModule, InferredOptionTypes, Options } from "yargs";
 import { hideBin } from "yargs/helpers";
+
 import { InternalOptionsContext } from "./context.js";
-import { buildFlatTasks, FlatTasks, runTask, Task } from "./tasks.js";
+import { FlatTasks, Task, buildFlatTasks, runTask } from "./tasks.js";
 
 type CommandOptions = Readonly<Record<string, Options>>;
 
@@ -59,7 +61,7 @@ const getInternalOptions = (
     const slug = slugify(title.toLowerCase());
 
     if (slug in slugToTitle) {
-      throw new Error(`Two tasks have the same title slug: ${slug}`);
+      throw new Error(`Two tasks have the same title slug: \`${slug}\`.`);
     }
 
     slugToTitle[slug] = title;
@@ -79,36 +81,35 @@ const getInternalOptions = (
   const coerceSlugToTitleArray = (elements: readonly string[]): string[] =>
     elements.map((element) => coerceSlugToTitle(element));
 
-  const interactive = isInteractive();
-
   return {
-    debug: {
-      boolean: true,
+    concurrency: {
       coerce(value) {
-        if (!value && !interactive) {
-          throw new Error(
-            "Cannot opt-out of debug mode in non interactive terminals.",
-          );
+        if (value < 0) {
+          throw new Error("Must be greater than 0.");
         }
 
-        return Boolean(value);
+        return Number(value);
       },
-      default: !interactive,
-      defaultDescription: "false if terminal is interactive, true otherwise",
-      description:
-        "Run all tasks sequentially, switch to verbose renderer, and stream the output of shell commands",
+      default: 1,
+      defaultDescription: "Use all the available CPUs.",
+      description: [
+        "How many concurrent tasks should be executed at the same time.",
+        "0 means 1 task, 1 means as much as there are CPUs on the machine, 0.5 means half the CPUs, etc.",
+        "If 0, the verbose renderer will be used and the output of shell commands will be streamed to the terminal.",
+      ].join("\n"),
+      number: true,
     },
     dryRun: {
       boolean: true,
       default: false,
       description:
-        "Do not run tasks but show the shell commands that would have been run",
+        "Do not run tasks but show the shell commands that would have been run.",
     },
     from: {
       choices: availableTitles,
       coerce: coerceSlugToTitle,
       description:
-        "Skip tasks before the one with the given title (or title slug)",
+        "Skip tasks before the one with the given title (or title slug).",
     },
     only: {
       array: true,
@@ -116,26 +117,26 @@ const getInternalOptions = (
       coerce: coerceSlugToTitleArray,
       default: [],
       description:
-        "Only run tasks with one of the given titles (or title slugs)",
+        "Only run tasks with one of the given titles (or title slugs).",
     },
     skip: {
       array: true,
       choices: availableTitles,
       coerce: coerceSlugToTitleArray,
       default: [],
-      description: "Skip tasks with one of the given titles (or title slugs)",
+      description: "Skip tasks with one of the given titles (or title slugs).",
     },
     tag: {
       array: true,
       choices: [...availableTags].sort(),
       default: [],
-      description: "Only run tasks with at least one of the given tags",
+      description: "Only run tasks with at least one of the given tags.",
     },
     until: {
       choices: availableTitles,
       coerce: coerceSlugToTitle,
       description:
-        "Skip tasks after the one with the given title (or title slug)",
+        "Skip tasks after the one with the given title (or title slug).",
     },
   };
 };
@@ -165,8 +166,9 @@ export const runCli = async (
   }
 
   await yargsInstance
-    .completion("completion", "Print completion script")
-    .demandCommand(1)
+    .completion("completion", "Print completion script.")
+    .demandCommand()
+    .recommendCommands()
     .showHelpOnFail(false)
     .strict()
     .version(false)

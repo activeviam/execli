@@ -1,5 +1,7 @@
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
+
+import { describe, expect, test } from "@jest/globals";
 import { execa } from "execa";
 import { packageDirectorySync } from "pkg-dir";
 import { temporaryFileTask } from "tempy";
@@ -22,7 +24,11 @@ test("compile", async () => {
   await temporaryFileTask(
     async (targetPath) => {
       await execa("node", [binPath, "compile", commandsFilePath, targetPath]);
-      const { stdout } = await execa(targetPath, ["simple", "--debug"]);
+      const { stdout } = await execa(targetPath, [
+        "simple",
+        "--concurrency",
+        "0",
+      ]);
       expect(stdout).toContain("Echo middle");
       expect(stdout).toContain("mystery");
     },
@@ -56,25 +62,17 @@ describe("run", () => {
       },
     ],
     [
-      "debug",
-      {
-        commandName: "simple",
-        options: ["--debug"],
-      },
-    ],
-    [
-      "debug forced in non interactive terminals",
-      {
-        commandName: "simple",
-        failing: true,
-        options: ["--no-debug"],
-      },
-    ],
-    [
       "dryRun",
       {
         commandName: "simple",
         options: ["--dryRun"],
+      },
+    ],
+    [
+      "concurrent",
+      {
+        commandName: "simple",
+        concurrency: 1,
       },
     ],
     [
@@ -178,10 +176,12 @@ describe("run", () => {
       _,
       {
         commandName,
+        concurrency = 0,
         failing = false,
         options = [],
       }: Readonly<{
         commandName?: string;
+        concurrency?: number;
         failing?: boolean;
         options?: readonly string[];
       }> = {},
@@ -191,6 +191,8 @@ describe("run", () => {
         [
           ...runArguments,
           ...(commandName ? ["--", commandName] : []),
+          "--concurrency",
+          String(concurrency),
           ...options,
         ],
         {

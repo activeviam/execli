@@ -1,4 +1,4 @@
-import { getCommand, Task } from "../../index.js";
+import { Task, getCommand } from "../../index.js";
 import { failingNodeScriptCommand } from "./utils.js";
 
 const slowButSuccessfulTask: Task = {

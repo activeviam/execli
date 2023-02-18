@@ -1,5 +1,5 @@
 export type SharedContext = Readonly<{
-  debug: boolean;
+  concurrency: number;
 }>;
 
 export type Context<CustomContext> = SharedContext & Readonly<CustomContext>;

@@ -1,4 +1,4 @@
-![npm](https://img.shields.io/npm/v/execli)
+[![npm](https://img.shields.io/npm/v/execli)](https://www.npmjs.com/package/execli)
 
 # Execli
 

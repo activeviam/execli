@@ -1,4 +1,3 @@
-import { cpus } from "node:os";
 import { argv } from "node:process";
 
 import slugify from "@sindresorhus/slugify";

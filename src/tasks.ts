@@ -1,6 +1,7 @@
-import { env, stdout } from "node:process";
+import { env } from "node:process";
 
 import { Options } from "execa";
+import _isInteractive from "is-interactive";
 import {
   Listr,
   ListrGetRendererOptions,
@@ -358,10 +359,12 @@ const processCommandProperties = <C>(
   return { command, options };
 };
 
+const isInteractive = _isInteractive();
+
 const isUsingVerboseRenderer = ({
   concurrency,
 }: Pick<InternalContext, "concurrency">): boolean =>
-  concurrency === 0 || !stdout.isTTY;
+  concurrency === 0 || !isInteractive;
 
 const processLine = (
   line: string,

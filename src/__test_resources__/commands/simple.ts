@@ -1,4 +1,4 @@
-import { getCommand, OptionsContext, Task } from "../../index.js";
+import { OptionsContext, Task, getCommand } from "../../index.js";
 
 const options = {
   flag: {

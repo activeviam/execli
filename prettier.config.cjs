@@ -1,11 +1,9 @@
 "use strict";
 
 module.exports = {
-  bracketSpacing: true,
-  endOfLine: "auto",
-  semi: true,
-  singleQuote: false,
-  tabWidth: 2,
+  importOrder: ["^node:(.*)$", "<THIRD_PARTY_MODULES>", "^[./]"],
+  importOrderGroupNamespaceSpecifiers: true,
+  importOrderSeparation: true,
+  importOrderSortSpecifiers: true,
   trailingComma: "all",
-  useTabs: false,
 };

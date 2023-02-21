@@ -3,36 +3,35 @@
 exports[`run command required {"failing":true} 1`] = `
 {
   "stderr": [
-    "Not enough non-option arguments: got 0, need at least 1",
+    "bin.js run <path>",
+    "",
+    "Run the commands at the given path, forwarding the command line arguments after \`--\`.",
+    "",
+    "Positionals:",
+    "  path  The path resolving to the file exporting the commands.  [string] [required]",
+    "",
+    "Options:",
+    "  --help  Show help  [boolean]",
+    "",
+    "Unknown argument: concurrency",
   ],
 }
 `;
 
-exports[`run debug {"commandName":"simple","options":["--debug"]} 1`] = `
+exports[`run concurrent {"commandName":"simple","concurrency":1} 1`] = `
 {
   "stdout": [
     "[STARTED] Parent task",
     "[STARTED] Echo start",
-    "[DATA] echo start",
-    "start",
+    "[DATA] Echo start: $ echo start",
     "[SUCCESS] Echo start",
     "[STARTED] Echo middle",
-    "[DATA] echo mystery",
-    "mystery",
+    "[DATA] Echo middle: $ echo mystery",
     "[SUCCESS] Echo middle",
     "[STARTED] Echo end",
-    "[DATA] echo end",
-    "end",
+    "[DATA] Echo end: $ echo end",
     "[SUCCESS] Echo end",
     "[SUCCESS] Parent task",
-  ],
-}
-`;
-
-exports[`run debug forced in non interactive terminals {"commandName":"simple","failing":true,"options":["--no-debug"]} 1`] = `
-{
-  "stderr": [
-    "Cannot opt-out of debug mode in non interactive terminals.",
   ],
 }
 `;
@@ -63,7 +62,7 @@ exports[`run failed command task {"commandName":"error","failing":true,"options"
     "Error: Command failed with exit code 1: node --eval console.log('failing'); process.exit(1)",
     "    at ExecError.toDetailedError (SOME_EXECLI_PATH)",
     "    at runTask (SOME_EXECLI_PATH)",
-    "    at processTicksAndRejections (SOME_NODE_PATH)",
+    "    at process.processTicksAndRejections (SOME_NODE_PATH)",
     "    at async Object.handler (SOME_EXECLI_PATH)",
   ],
   "stdout": [
@@ -73,7 +72,7 @@ exports[`run failed command task {"commandName":"error","failing":true,"options"
     "[STARTED] Nest task",
     "[SKIPPED] Skipped by --from option",
     "[STARTED] Run failing script",
-    "[DATA] node --eval "console.log('failing'); process.exit(1)"",
+    "[DATA] $ node --eval "console.log('failing'); process.exit(1)"",
     "failing",
   ],
 }
@@ -90,11 +89,12 @@ exports[`run failed regular task {"commandName":"error","failing":true} 1`] = `
     "    at runRegularTask (SOME_EXECLI_PATH)",
     "    at Task.task (SOME_EXECLI_PATH)",
     "    at Task.run (SOME_EXECLI_PATH)",
+    "    at async SOME_EXECLI_PATH",
   ],
   "stdout": [
     "[STARTED] Parent task",
     "[STARTED] Print current directory",
-    "[DATA] pwd",
+    "[DATA] $ pwd",
     "SOME_EXECLI_PATH",
     "[SUCCESS] Print current directory",
     "[STARTED] Nest task",
@@ -113,11 +113,11 @@ exports[`run from {"commandName":"simple","options":["--from","Echo middle"]} 1`
     "[STARTED] Echo start",
     "[SKIPPED] Skipped by --from option",
     "[STARTED] Echo middle",
-    "[DATA] echo mystery",
+    "[DATA] $ echo mystery",
     "mystery",
     "[SUCCESS] Echo middle",
     "[STARTED] Echo end",
-    "[DATA] echo end",
+    "[DATA] $ echo end",
     "end",
     "[SUCCESS] Echo end",
     "[SUCCESS] Parent task",
@@ -130,7 +130,7 @@ exports[`run only (exact title) {"commandName":"simple","options":["--only","Ech
   "stdout": [
     "[STARTED] Parent task",
     "[STARTED] Echo start",
-    "[DATA] echo start",
+    "[DATA] $ echo start",
     "start",
     "[SUCCESS] Echo start",
     "[STARTED] Echo middle",
@@ -156,7 +156,7 @@ exports[`run only (slug) {"commandName":"simple","options":["--only","echo-start
   "stdout": [
     "[STARTED] Parent task",
     "[STARTED] Echo start",
-    "[DATA] echo start",
+    "[DATA] $ echo start",
     "start",
     "[SUCCESS] Echo start",
     "[STARTED] Echo middle",
@@ -173,15 +173,15 @@ exports[`run option (existing) {"commandName":"simple","options":["--flag"]} 1`]
   "stdout": [
     "[STARTED] Parent task",
     "[STARTED] Echo start",
-    "[DATA] echo start",
+    "[DATA] $ echo start",
     "start",
     "[SUCCESS] Echo start",
     "[STARTED] Echo middle",
-    "[DATA] echo mystery",
+    "[DATA] $ echo mystery",
     "mystery",
     "[SUCCESS] Echo middle",
     "[STARTED] Echo end",
-    "[DATA] echo end",
+    "[DATA] $ echo end",
     "end",
     "[SUCCESS] Echo end",
     "[SUCCESS] Parent task",
@@ -205,15 +205,15 @@ exports[`run rollback {"commandName":"rollback","failing":true} 1`] = `
     "[ROLLBACK] Parent task",
     "Error: Parent task",
     "    at Task.run (SOME_EXECLI_PATH)",
-    "    at processTicksAndRejections (SOME_NODE_PATH)",
+    "    at process.processTicksAndRejections (SOME_NODE_PATH)",
     "    at async SOME_EXECLI_PATH",
   ],
   "stdout": [
     "[STARTED] Parent task",
     "[STARTED] Run failing script",
-    "[DATA] node --eval "console.log('failing'); process.exit(1)"",
+    "[DATA] $ node --eval "console.log('failing'); process.exit(1)"",
     "failing",
-    "[DATA] echo rollback",
+    "[DATA] $ echo rollback",
     "rollback",
   ],
 }
@@ -226,11 +226,11 @@ exports[`run skip (exact title) {"commandName":"simple","options":["--skip","Ech
     "[STARTED] Echo start",
     "[SKIPPED] Skipped by --skip option",
     "[STARTED] Echo middle",
-    "[DATA] echo mystery",
+    "[DATA] $ echo mystery",
     "mystery",
     "[SUCCESS] Echo middle",
     "[STARTED] Echo end",
-    "[DATA] echo end",
+    "[DATA] $ echo end",
     "end",
     "[SUCCESS] Echo end",
     "[SUCCESS] Parent task",
@@ -254,11 +254,11 @@ exports[`run skip (slug) {"commandName":"simple","options":["--skip","echo-start
     "[STARTED] Echo start",
     "[SKIPPED] Skipped by --skip option",
     "[STARTED] Echo middle",
-    "[DATA] echo mystery",
+    "[DATA] $ echo mystery",
     "mystery",
     "[SUCCESS] Echo middle",
     "[STARTED] Echo end",
-    "[DATA] echo end",
+    "[DATA] $ echo end",
     "end",
     "[SUCCESS] Echo end",
     "[SUCCESS] Parent task",
@@ -271,7 +271,7 @@ exports[`run tag (existing) {"commandName":"simple","options":["--tag","a"]} 1`]
   "stdout": [
     "[STARTED] Parent task",
     "[STARTED] Echo start",
-    "[DATA] echo start",
+    "[DATA] $ echo start",
     "start",
     "[SUCCESS] Echo start",
     "[STARTED] Echo middle",
@@ -297,11 +297,11 @@ exports[`run until {"commandName":"simple","options":["--until","Echo middle"]} 
   "stdout": [
     "[STARTED] Parent task",
     "[STARTED] Echo start",
-    "[DATA] echo start",
+    "[DATA] $ echo start",
     "start",
     "[SUCCESS] Echo start",
     "[STARTED] Echo middle",
-    "[DATA] echo mystery",
+    "[DATA] $ echo mystery",
     "mystery",
     "[SUCCESS] Echo middle",
     "[STARTED] Echo end",

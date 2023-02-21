@@ -1,14 +1,16 @@
 import { EOL } from "node:os";
 import { relative } from "node:path";
 import { cwd, platform, stderr, stdout } from "node:process";
+
 import {
-  execa,
   ExecaChildProcess,
   ExecaError,
   ExecaReturnValue,
   Options,
+  execa,
 } from "execa";
-import { hideSecrets, InternalContext, SharedContext } from "./context.js";
+
+import { InternalContext, SharedContext, hideSecrets } from "./context.js";
 
 export type Command = readonly string[];
 
@@ -18,7 +20,7 @@ export type OutputLine = (line: Line) => void;
 
 type SubprocessOptions = Options &
   Readonly<{
-    /** Does not pipe the IO in debug mode and does not output a line for the running command in the corresponding task. */
+    /** Does not pipe the IO even when `concurrency` is 0 and does not output a line for the running command in the corresponding task. */
     silent?: true;
   }>;
 
@@ -79,7 +81,7 @@ export const createSubprocess = (
   try {
     const subprocess = execa(file, arguments_, options);
 
-    if (context.debug && !options.silent) {
+    if (context.concurrency === 0 && !options.silent) {
       if (subprocess.stdout) {
         subprocess.stdout.pipe(stdout);
       }
@@ -149,7 +151,7 @@ export const createExec =
   (context: InternalContext, outputLine: OutputLine): Exec =>
   async (command, options = {}) => {
     if (!options.silent) {
-      outputLine(getCommandString(command, context, options));
+      outputLine(`$ ${getCommandString(command, context, options)}`);
     }
 
     const subprocess = createSubprocess(command, context, options);

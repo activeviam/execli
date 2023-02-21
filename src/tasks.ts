@@ -1,4 +1,5 @@
-import { env } from "node:process";
+import { env, stdout } from "node:process";
+
 import { Options } from "execa";
 import {
   Listr,
@@ -6,24 +7,26 @@ import {
   ListrTask,
   ListrTaskWrapper,
 } from "listr2";
+
 import {
   Context,
   ContextHolder,
   ContextLike,
-  createContextHolder,
-  getUserContext,
   InternalContext,
   InternalOptionsContext,
+  createContextHolder,
+  getUserContext,
 } from "./context.js";
 import {
   Command,
-  createExec,
   Exec,
   ExecError,
-  getCommandString,
   Line,
   OutputLine,
+  createExec,
+  getCommandString,
 } from "./exec.js";
+import { getCpuCount } from "./get-cpu-count.js";
 
 type BaseTask = Readonly<{
   title: Line;
@@ -272,14 +275,6 @@ const shouldSkipByTaskProperty = <C>(
     result = task.skip(getUserContext(context));
   }
 
-  if (typeof result === "string") {
-    return result;
-  }
-
-  if (result === true) {
-    return "Tasked skipped itself";
-  }
-
   return result;
 };
 
@@ -363,14 +358,46 @@ const processCommandProperties = <C>(
   return { command, options };
 };
 
+const isUsingVerboseRenderer = ({
+  concurrency,
+}: Pick<InternalContext, "concurrency">): boolean =>
+  concurrency === 0 || !stdout.isTTY;
+
+const processLine = (
+  line: string,
+  {
+    concurrency,
+    taskTitle,
+  }: Pick<InternalContext, "concurrency"> &
+    Readonly<{
+      taskTitle: string;
+    }>,
+): string => {
+  if (/\r?\n/.test(line)) {
+    throw new Error(
+      `Expected single line but got some line breaks in:\n\n: ${line}`,
+    );
+  }
+
+  return concurrency > 0 && isUsingVerboseRenderer({ concurrency })
+    ? `${taskTitle}: ${line}`
+    : line;
+};
+
 const createOutputLine =
-  (taskWrapper: ListrTaskWrapper<void, any>): OutputLine =>
+  (
+    taskWrapper: ListrTaskWrapper<void, any>,
+    { concurrency }: Pick<InternalContext, "concurrency">,
+  ): OutputLine =>
   (line) => {
     if (/\r?\n/.test(line)) {
       throw new Error(`Output line cannot contain line break:\n\n: ${line}`);
     }
 
-    taskWrapper.output = line;
+    taskWrapper.output = processLine(line, {
+      concurrency,
+      taskTitle: taskWrapper.title,
+    });
   };
 
 const createSkippableTask = <C>(
@@ -379,14 +406,27 @@ const createSkippableTask = <C>(
   task: Readonly<ListrTask<void>>,
 ): ListrTask<void> => ({
   ...task,
-  skip() {
-    const option = skippedTasks[task.title!];
+  async skip() {
+    const taskTitle = task.title!;
+
+    const option = skippedTasks[taskTitle];
 
     if (option === "from" || option === "skip" || option === "until") {
-      return getSkipReason(option);
+      return processLine(getSkipReason(option), {
+        concurrency: context.concurrency,
+        taskTitle,
+      });
     }
 
-    return shouldSkipByTaskProperty(context, task);
+    const skipResult = await shouldSkipByTaskProperty(context, task);
+
+    return (
+      skipResult &&
+      processLine(skipResult === true ? "Task skipped itself" : skipResult, {
+        concurrency: context.concurrency,
+        taskTitle,
+      })
+    );
   },
 });
 
@@ -406,7 +446,9 @@ const runRegularTask = async <C>(
   taskWrapper: ListrTaskWrapper<void, any>,
 ) => {
   const context = contextHolder.get();
-  const outputLine = createOutputLine(taskWrapper);
+  const outputLine = createOutputLine(taskWrapper, {
+    concurrency: context.concurrency,
+  });
   const exec = createExec(context, outputLine);
   const result = await run({
     context: getUserContext(context),
@@ -436,7 +478,12 @@ const createCommandTask = <C>(
       );
 
       if (commandProperties) {
-        const exec = createExec(context, createOutputLine(taskWrapper));
+        const exec = createExec(
+          context,
+          createOutputLine(taskWrapper, {
+            concurrency: context.concurrency,
+          }),
+        );
         await exec(commandProperties.command, commandProperties.options);
       }
     },
@@ -491,6 +538,8 @@ const getStaticParentTaskSkipReason = <A, B, C>(
   return false;
 };
 
+const cpuCount = getCpuCount();
+
 const createParentTask = <C, A>(
   contextHolder: ContextHolder<C>,
   skippedTasks: StaticallySkippedTasks,
@@ -533,7 +582,7 @@ const createParentTask = <C, A>(
     },
     task() {
       const ownContextHolder: ContextHolder<C> = contextHolder.copy();
-      const { debug, dryRun } = ownContextHolder.get();
+      const { concurrency } = ownContextHolder.get();
 
       let childrenTask = new Listr(
         task.children.map((childTask) =>
@@ -546,18 +595,23 @@ const createParentTask = <C, A>(
           ),
         ),
         {
-          concurrent: !debug && task.concurrent,
+          concurrent:
+            task.concurrent && concurrency > 0
+              ? Math.round(cpuCount * concurrency)
+              : false,
         },
       );
 
       if ("addContext" in task) {
-        const childrenTaskWithAdddedContext = childrenTask;
+        const childrenTaskWithAddedContext = childrenTask;
         const { addContext, title } = task as ParentTask<C, A & ContextLike>;
         childrenTask = new Listr([
           {
             async task(_, taskWrapper) {
               const context = ownContextHolder.get();
-              const outputLine = createOutputLine(taskWrapper);
+              const outputLine = createOutputLine(taskWrapper, {
+                concurrency: context.concurrency,
+              });
               const exec = createExec(context, outputLine);
               const addedContext = await addContext({
                 addSecret(secret) {
@@ -573,7 +627,7 @@ const createParentTask = <C, A>(
             title: `${title} [adding context]`,
           },
           {
-            task: () => childrenTaskWithAdddedContext,
+            task: () => childrenTaskWithAddedContext,
             title: `${title} [with added context]`,
           },
         ]);
@@ -603,7 +657,9 @@ function createListrTask<C>(
   return createParentTask(contextHolder, skippedTasks, task);
 }
 
-const showTimer = env.NODE_ENV !== "test";
+const isTesting = env.NODE_ENV === "test";
+
+const showTimer = !isTesting;
 
 const defaultRendererOptions: ListrGetRendererOptions<"default"> = {
   collapse: false,
@@ -614,6 +670,7 @@ const defaultRendererOptions: ListrGetRendererOptions<"default"> = {
 
 const verboseRendererOptions: ListrGetRendererOptions<"verbose"> = {
   showTimer,
+  useIcons: !isTesting,
 };
 
 export const runTask = async <C>(
@@ -625,6 +682,7 @@ export const runTask = async <C>(
     ...context,
     secrets: [],
   };
+
   try {
     await new Listr(
       [
@@ -634,7 +692,7 @@ export const runTask = async <C>(
           task,
         ),
       ],
-      context.debug
+      isUsingVerboseRenderer(context)
         ? {
             renderer: "verbose",
             rendererOptions: verboseRendererOptions,
@@ -647,8 +705,8 @@ export const runTask = async <C>(
   } catch (error: unknown) {
     if (error instanceof ExecError) {
       throw error.toDetailedError({
-        // In --debug mode, stdout and stderr were already streamed to the terminal.
-        withOutputs: !context.debug,
+        // When `concurrency` is 0, stdout and stderr were already streamed to the terminal.
+        withOutputs: context.concurrency > 0,
       });
     }
 
